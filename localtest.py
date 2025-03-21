@@ -1,12 +1,7 @@
 #!/usr/bin/env python3.9
 import asyncio
-import time
-import requests
 from datetime import datetime, timedelta
-from sortedcontainers import SortedSet
-from blinkpy.helpers.util import json_load
 from blinkpy.blinkpy import Blink, BlinkSyncModule
-from blinkpy.auth import Auth
 from aiohttp import ClientSession
 import os
 import logging
@@ -14,59 +9,19 @@ import logging
 # Use the same endpoint that appears during login.
 BASE_URL = "https://rest-e006.immedia-semi.com"
 
-def request_manifest(account_id, network_id, sync_id, headers):
-    url = f"{BASE_URL}/api/v1/accounts/{account_id}/networks/{network_id}/sync_modules/{sync_id}/local_storage/manifest/request"
-    print("Request URL:", url)
-    response = requests.post(url, headers=headers)
-    print("Response Status Code:", response.status_code)
-    print("Response Content:", response.content)
-    if response.status_code == 200:
-        data = response.json()
-        return data.get("id")
-    return None
-
-def get_manifest(account_id, network_id, sync_id, manifest_request_id, headers):
-    url = f"{BASE_URL}/api/v1/accounts/{account_id}/networks/{network_id}/sync_modules/{sync_id}/local_storage/manifest/request/{manifest_request_id}"
-    # Allow time for the manifest to be generated
-    time.sleep(5)
-    response = requests.get(url, headers=headers)
-    print("Manifest retrieval status:", response.status_code)
-    if response.status_code == 200:
-        data = response.json()
-        return data.get("manifest_id"), data.get("clips", [])
-    return None, []
-
-def request_clip_upload(account_id, network_id, sync_id, manifest_id, clip_id, headers):
-    url = f"{BASE_URL}/api/v1/accounts/{account_id}/networks/{network_id}/sync_modules/{sync_id}/local_storage/manifest/{manifest_id}/clip/request/{clip_id}"
-    response = requests.post(url, headers=headers)
-    if response.status_code == 200:
-        return response.json()
-    return None
-
-def download_clip(clip_url, output_filename):
-    response = requests.get(clip_url, stream=True)
-    if response.status_code == 200:
-        with open(output_filename, "wb") as f:
-            for chunk in response.iter_content(chunk_size=1024):
-                if chunk:
-                    f.write(chunk)
-        print("Downloaded clip to", output_filename)
-    else:
-        print("Error downloading clip:", response.status_code)
-
-async def start(session):
-    # Use a context manager for the aiohttp session    
-    blink = Blink(session=session)
-    await blink.start()
-    return blink
-
-DOWNLOAD_PATH = "/home/giacomosig/blinkpy/recordings"  # Change this to your desired save location
+DOWNLOAD_PATH = "/home/giacomo/Documenti/Recordings"  # Change this to your desired save location
 SYNC_MODULE_NAME = "Casa online" 
 
 # Configure logging to write to a file
 logging.basicConfig(level=logging.INFO, filename='blinkpy.log', filemode='a',
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+async def start(session):
+    # Use a context manager for the aiohttp session    
+    blink = Blink(session=session)
+    await blink.start()
+    return blink
 
 async def main():
     # Ensure the download directory exists
