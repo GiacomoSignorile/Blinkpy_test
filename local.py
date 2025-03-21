@@ -59,7 +59,7 @@ async def start(session):
     await blink.start()
     return blink
 
-DOWNLOAD_PATH = "/home/giacomosig/blinkpy/recordings"  # Change this to your desired save location
+DOWNLOAD_PATH = "/home/giacomo/Documenti/Recordings"  # Change this to your desired save location
 SYNC_MODULE_NAME = "Casa online" 
 
 # Configure logging to write to a file

@@ -6,8 +6,6 @@ from aiohttp import ClientSession
 import os
 import logging
 
-# Use the same endpoint that appears during login.
-BASE_URL = "https://rest-e006.immedia-semi.com"
 
 DOWNLOAD_PATH = "/home/giacomo/Documenti/Recordings"  # Change this to your desired save location
 SYNC_MODULE_NAME = "Casa online" 
