@@ -7,6 +7,7 @@ x-common: &common
   environment:
     DATA_DIR: /data
     DOWNLOAD_PATH: /home/giacomo/Documenti/Recordings
+    NTFY_URL: http://ntfy
   volumes:
     - ./data:/data
     - /home/giacomo/Documenti/Recordings:/home/giacomo/Documenti/Recordings
@@ -21,3 +22,16 @@ services:
     command: uvicorn blinkwatch.web:app --host 0.0.0.0 --port 8765
     ports:
       - "8765:8765"
+
+  ntfy:
+    image: binwiederhier/ntfy
+    command: serve
+    restart: unless-stopped
+    user: "1000:1000"
+    environment:
+      NTFY_BASE_URL: http://100.66.9.116:8088
+      NTFY_CACHE_FILE: /var/cache/ntfy/cache.db
+    volumes:
+      - ./data/ntfy:/var/cache/ntfy
+    ports:
+      - "8088:80"

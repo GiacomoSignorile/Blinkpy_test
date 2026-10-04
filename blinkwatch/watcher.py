@@ -14,6 +14,7 @@ from . import config, store
 from .blink_client import connect, download
 from .classifier import ClipClassifier, fallback_thumb
 from .embedder import Embedder
+from . import identify, notify
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 log = logging.getLogger("watcher")
@@ -62,15 +63,26 @@ async def classify_pending(classifier, embedder, db):
             log.exception("classification failed for %s", row["path"])
             store.set_result(db, row["id"], [], {}, status="error")
             continue
+        preds = []  # (kind, label, confidence) of each crop, to say who is in the clip
         for n, (kind, name, conf, image) in enumerate(crops):
             rel = f"{row['id']}_{n}.jpg"
             config.CROP_DIR.mkdir(parents=True, exist_ok=True)
             cv2.imwrite(str(config.CROP_DIR / rel), image, [cv2.IMWRITE_JPEG_QUALITY, 92])
             emb = await asyncio.to_thread(embedder.embed, image)
+            guess = await asyncio.to_thread(identify.predict, db, kind, emb)
+            if guess:
+                preds.append((kind, *guess))
             store.add_crop(db, row["id"], row["camera"], row["created_at"], name, round(conf, 3), rel,
-                           kind=kind, embedding=emb.tobytes())
-        store.set_result(db, row["id"], cats, details)
-        log.info("[%s] %s -> %s %s", row["camera"], row["created_at"], sorted(cats) or "nulla", details)
+                           kind=kind, embedding=emb.tobytes(),
+                           pred_label=guess[0] if guess else None, pred_conf=round(guess[1], 3) if guess else None)
+        identities = identify.summarize(cats, preds)
+        store.set_result(db, row["id"], cats, details, identities=identities)
+        try:
+            await asyncio.to_thread(notify.send_for_clip, row, cats, details, identities)
+        except Exception:
+            log.exception("notification failed")
+        log.info("[%s] %s -> %s %s %s", row["camera"], row["created_at"], sorted(cats) or "nulla", details,
+                 [f"{i['name']} {i['conf']:.0%}" for i in identities])
 
 
 def delete_old_videos(db):
@@ -88,8 +100,9 @@ def delete_old_videos(db):
 
 
 def backfill_embeddings(embedder, db):
-    """Crops saved before embeddings existed (or whose embedding failed)."""
-    for row in db.execute("SELECT id, file FROM crops WHERE embedding IS NULL").fetchall():
+    """Crops with no embedding, or one from an older model (different size)."""
+    for row in db.execute("SELECT id, file FROM crops WHERE embedding IS NULL OR length(embedding) != ?",
+                          (config.EMBED_DIM * 4,)).fetchall():
         image = cv2.imread(str(config.CROP_DIR / row["file"]))
         if image is not None:
             db.execute("UPDATE crops SET embedding=? WHERE id=?", (embedder.embed(image).tobytes(), row["id"]))

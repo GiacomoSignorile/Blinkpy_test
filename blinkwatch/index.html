@@ -33,6 +33,10 @@
   .badge { font-size:12px; font-weight:600; color:#fff; border-radius:6px; padding:2px 8px; }
   .badge.persona { background:var(--persona); } .badge.veicolo { background:var(--veicolo); }
   .badge.animale { background:var(--animale); } .badge.none { background:var(--none); }
+  .badge.id-known { background:transparent; color:var(--text); border:1px solid var(--accent); }
+  .badge.id-generic { background:transparent; color:var(--muted); border:1px solid var(--line); }
+  .badge.id-unknown { background:var(--persona); }
+  .badge.id-uncertain { background:transparent; color:var(--muted); border:1px dashed var(--muted); }
   .badge.error, .badge.downloaded { background:#b7791f; }
   #more { display:block; margin:0 auto 32px; }
   #empty { text-align:center; color:var(--muted); padding:48px 16px; }
@@ -75,6 +79,11 @@ function card(e) {
   const badges = e.categories.length
     ? e.categories.map(c => `<span class="badge ${c}">${c}</span>`).join("")
     : `<span class="badge ${e.status === "classified" ? "none" : e.status}">${e.status === "classified" ? "nessuno" : e.status}</span>`;
+  const who = (e.identities || []).map(i => {
+    const pct = i.state === "known" ? ` ${Math.round(i.conf * 100)}%` : "";
+    const icon = i.kind === "animale" ? "🐾" : "👤";
+    return `<span class="badge id-${i.state}">${icon} ${i.state === "uncertain" ? i.name + " ?" : i.name}${pct}</span>`;
+  }).join("");
   const det = Object.entries(e.details).map(([k, v]) => `${k} ${Math.round(v * 100)}%`).join(" · ");
   const id = encodeURIComponent(e.id);
   const media = e.has_video
@@ -82,7 +91,7 @@ function card(e) {
     : `<img class="thumb" loading="lazy" alt="" src="/thumb/${id}" onerror="this.style.visibility='hidden'">`;
   el.innerHTML = `${media}
     <div class="meta"><div class="row"><span class="cam"></span><span>${fmt(e.created_at)}</span></div>
-    <div class="badges">${badges}</div><div class="row"><span>${det}</span>${e.has_video ? "" : '<span class="gone">video eliminato</span>'}</div></div>`;
+    <div class="badges">${badges}${who}</div><div class="row"><span>${det}</span>${e.has_video ? "" : '<span class="gone">video eliminato</span>'}</div></div>`;
   el.querySelector(".cam").textContent = e.camera;
   return el;
 }

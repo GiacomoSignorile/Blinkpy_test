@@ -97,7 +97,7 @@ function show() {
   $("when").textContent = new Date(current.created_at).toLocaleString("it-IT", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" });
   const sg = current.suggestion;
   if (sg) {
-    $("sugg").innerHTML = `Suggerito: <b>${sg.label}</b> · somiglianza ${Math.round(sg.score * 100)}% · ${sg.n} esempi` +
+    $("sugg").innerHTML = `Suggerito: <b>${sg.label}</b> · confidenza ${Math.round(sg.score * 100)}% · ${sg.n} esempi` +
       (sg.provisional ? ` <span class="warn">(provvisorio, pochi esempi)</span>` : "") + ` <kbd>Invio</kbd> per accettare`;
     document.querySelectorAll("#btns button").forEach(b => b.classList.toggle("suggested", b.dataset.label === sg.label));
   } else {

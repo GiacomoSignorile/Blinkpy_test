@@ -6,3 +6,6 @@ events.db
 2fa_code.txt
 .env
 data/
+__pycache__/
+*.pyc
+watcher.log

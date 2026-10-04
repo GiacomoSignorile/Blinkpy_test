@@ -6,6 +6,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt \
     --extra-index-url https://download.pytorch.org/whl/cpu
 RUN python -c "from ultralytics import YOLO; YOLO('yolov8m.pt')"
-RUN python -c "import timm; timm.create_model('vit_small_patch14_dinov2.lvd142m', pretrained=True, num_classes=0)"
+RUN python -c "import timm; timm.create_model('vit_base_patch14_dinov2.lvd142m', pretrained=True, num_classes=0)"
 COPY blinkwatch ./blinkwatch
 CMD ["python", "-m", "blinkwatch.watcher"]

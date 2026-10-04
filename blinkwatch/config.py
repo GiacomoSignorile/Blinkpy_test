@@ -25,8 +25,9 @@ DB_PATH = DATA_DIR / "events.db"
 THUMB_DIR = DATA_DIR / "thumbs"  # preview images, kept after the video is deleted
 CROP_DIR = DATA_DIR / "crops"  # animal crops kept permanently, to label and train on
 CAT_NAMES = [n.strip() for n in os.environ.get("CAT_NAMES", "Mingo,Mango,Buccio,Luna,Gatto sconosciuto").split(",")]
-PERSON_NAMES = [n.strip() for n in os.environ.get("PERSON_NAMES", "Io,Mamma,Papà,Rossana,Domenico").split(",")]
-EMBED_MODEL = "vit_small_patch14_dinov2.lvd142m"
+PERSON_NAMES = [n.strip() for n in os.environ.get("PERSON_NAMES", "Io,Mamma,Papà,Rossana,Domenico,Lucrezia").split(",")]
+EMBED_MODEL = "vit_base_patch14_dinov2.lvd142m"  # benchmarked: best of the frozen-feature options
+EMBED_DIM = 768  # embeddings of another size were made by an older model and get recomputed
 MAX_PERSON_CROPS_PER_CLIP = int(os.environ.get("MAX_PERSON_CROPS_PER_CLIP", 4))
 # labels offered for each kind of crop; "altro" = not that kind of thing / unusable
 LABELS = {
@@ -54,3 +55,19 @@ CATEGORIES = {
     **{n: "animale" for n in ("bird", "cat", "dog", "horse", "sheep", "cow",
                               "elephant", "bear", "zebra", "giraffe")},
 }
+
+# Notifications (ntfy)
+NTFY_URL = os.environ.get("NTFY_URL")  # e.g. http://ntfy (inside docker); unset = notifications off
+NTFY_TOPIC = os.environ.get("NTFY_TOPIC")
+PUBLIC_URL = os.environ.get("PUBLIC_URL", "http://100.66.9.116:8765")  # how the phone reaches the web page
+NOTIFY_CATEGORIES = [c.strip() for c in os.environ.get("NOTIFY_CATEGORIES", "persona,animale").split(",") if c.strip()]
+NOTIFY_MUTE = {n.strip() for n in os.environ.get("NOTIFY_MUTE", "").split(",") if n.strip()}  # names that never notify
+NOTIFY_COOLDOWN_ANIMAL = int(os.environ.get("NOTIFY_COOLDOWN_ANIMAL", 600))
+# Below this confidence an identification is reported as "not recognised" instead of a name
+# (measured on held-out clips: cats 50% -> ~93% right on 83% of cases; people 60% -> ~85% right on 33% of cases)
+IDENTITY_MIN_CONF = {"animale": float(os.environ.get("IDENTITY_MIN_CONF_ANIMALE", 0.5)),
+                     "persona": float(os.environ.get("IDENTITY_MIN_CONF_PERSONA", 0.6))}
+NOTIFY_COOLDOWN = int(os.environ.get("NOTIFY_COOLDOWN", 120))  # seconds, per camera and category
+NOTIFY_MAX_AGE = int(os.environ.get("NOTIFY_MAX_AGE", 600))  # skip clips older than this (backlog, reclassification)
+NOTIFY_PRIORITY = {"persona": 4, "veicolo": 3, "animale": 2}
+NOTIFY_TAGS = {"persona": "bust_in_silhouette", "veicolo": "car", "animale": "paw_prints"}
