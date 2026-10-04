@@ -1,1 +1,8 @@
 blinkpy.log
+.venv/
+blink_credentials.json
+events.db
+*.pt
+2fa_code.txt
+.env
+data/

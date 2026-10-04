@@ -1,0 +1,92 @@
+2026-10-03 10:05:12,544 blinkpy.auth INFO OAuth v2 token refresh successful
+2026-10-03 10:05:13,023 blinkpy.blinkpy INFO network = {
+  "network_id": 169465,
+  "name": "Casa",
+  "cameras": [
+    {
+      "id": 204327,
+      "name": "Telecamera Ingresso",
+      "usage": 12,
+      "lv_seconds": 12,
+      "clip_seconds": 0
+    },
+    {
+      "id": 516740,
+      "name": "Telecamera Centrale ",
+      "usage": 166,
+      "lv_seconds": 166,
+      "clip_seconds": 0
+    }
+  ]
+}
+2026-10-03 10:05:13,023 blinkpy.blinkpy INFO network = {
+  "network_id": 221294,
+  "name": "Casa online",
+  "cameras": [
+    {
+      "id": 353965,
+      "name": "Telecamera Giardino",
+      "usage": 52,
+      "lv_seconds": 52,
+      "clip_seconds": 0
+    },
+    {
+      "id": 516670,
+      "name": "Telecamera Corridoio Esterno ",
+      "usage": 4,
+      "lv_seconds": 4,
+      "clip_seconds": 0
+    }
+  ]
+}
+2026-10-03 10:05:14,249 blinkpy.camera WARNING Could not find thumbnail for camera Telecamera mini.
+2026-10-03 10:05:19,443 blinkpy.sync_module INFO Found 982 new clip(s) in local storage manifest id = 6869
+2026-10-03 10:05:19,527 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:03.122056+02:00.
+2026-10-03 10:05:20,018 blinkpy.camera WARNING Could not find thumbnail for camera Telecamera mini.
+2026-10-03 10:05:21,657 blinkpy.sync_module INFO Found 1000 new clip(s) in local storage manifest id = 4788
+2026-10-03 10:05:21,757 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:05:23,867 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:05:56,277 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:03.122056+02:00.
+2026-10-03 10:05:56,743 blinkpy.camera WARNING Could not find thumbnail for camera Telecamera mini.
+2026-10-03 10:05:58,415 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:06:00,550 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:06:33,016 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:03.122056+02:00.
+2026-10-03 10:06:33,467 blinkpy.camera WARNING Could not find thumbnail for camera Telecamera mini.
+2026-10-03 10:06:35,155 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:06:37,358 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:07:09,838 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:03.122056+02:00.
+2026-10-03 10:07:10,257 blinkpy.camera WARNING Could not find thumbnail for camera Telecamera mini.
+2026-10-03 10:07:11,904 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:07:14,038 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:07:46,387 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:03.122056+02:00.
+2026-10-03 10:07:46,784 blinkpy.camera WARNING Could not find thumbnail for camera Telecamera mini.
+2026-10-03 10:07:48,403 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:07:50,445 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:08:22,781 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:03.122056+02:00.
+2026-10-03 10:08:23,219 blinkpy.camera WARNING Could not find thumbnail for camera Telecamera mini.
+2026-10-03 10:08:24,839 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:08:26,944 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:08:59,371 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:03.122056+02:00.
+2026-10-03 10:08:59,797 blinkpy.camera WARNING Could not find thumbnail for camera Telecamera mini.
+2026-10-03 10:09:01,438 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:09:03,565 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:09:35,887 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:03.122056+02:00.
+2026-10-03 10:09:36,344 blinkpy.camera WARNING Could not find thumbnail for camera Telecamera mini.
+2026-10-03 10:09:37,942 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:09:40,004 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:10:12,345 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:03.122056+02:00.
+2026-10-03 10:10:12,775 blinkpy.camera WARNING Could not find thumbnail for camera Telecamera mini.
+2026-10-03 10:10:14,594 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:10:16,648 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:10:49,036 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:03.122056+02:00.
+2026-10-03 10:10:49,438 blinkpy.camera WARNING Could not find thumbnail for camera Telecamera mini.
+2026-10-03 10:10:51,050 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:10:53,090 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:11:25,430 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:03.122056+02:00.
+2026-10-03 10:11:25,842 blinkpy.camera WARNING Could not find thumbnail for camera Telecamera mini.
+2026-10-03 10:11:27,519 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:11:29,560 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:12:01,914 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:03.122056+02:00.
+2026-10-03 10:12:02,330 blinkpy.camera WARNING Could not find thumbnail for camera Telecamera mini.
+2026-10-03 10:12:03,950 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.
+2026-10-03 10:12:06,042 blinkpy.sync_module INFO No new local storage videos since last manifest read at 2026-10-03 10:05:04.363546+02:00.

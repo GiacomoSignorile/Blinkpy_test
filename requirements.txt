@@ -1,0 +1,7 @@
+blinkpy
+sortedcontainers
+ultralytics
+opencv-python-headless
+fastapi
+uvicorn
+timm

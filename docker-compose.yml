@@ -1,0 +1,23 @@
+x-common: &common
+  build: .
+  image: blinkwatch
+  restart: unless-stopped
+  user: "1000:1000"
+  env_file: .env
+  environment:
+    DATA_DIR: /data
+    DOWNLOAD_PATH: /home/giacomo/Documenti/Recordings
+  volumes:
+    - ./data:/data
+    - /home/giacomo/Documenti/Recordings:/home/giacomo/Documenti/Recordings
+
+services:
+  watcher:
+    <<: *common
+    command: python -m blinkwatch.watcher
+
+  web:
+    <<: *common
+    command: uvicorn blinkwatch.web:app --host 0.0.0.0 --port 8765
+    ports:
+      - "8765:8765"

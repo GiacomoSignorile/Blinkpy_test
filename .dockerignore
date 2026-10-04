@@ -1,0 +1,6 @@
+.venv
+data
+.env
+.git
+*.log
+events.db

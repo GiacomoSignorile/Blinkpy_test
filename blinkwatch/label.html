@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Etichetta animali</title>
+<style>
+  :root { --bg:#0f1115; --card:#181b22; --text:#e8eaf0; --muted:#8b92a3; --line:#262a34; --accent:#7c8cff; }
+  @media (prefers-color-scheme: light) { :root { --bg:#f4f5f8; --card:#fff; --text:#1a1d24; --muted:#697085; --line:#e1e4ec; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.4 system-ui,sans-serif; }
+  header { padding:12px 16px; display:flex; gap:12px; align-items:center; border-bottom:1px solid var(--line); }
+  header a { color:var(--accent); text-decoration:none; }
+  h1 { font-size:18px; margin:0; flex:1; }
+  #stats { padding:10px 16px; display:flex; flex-wrap:wrap; gap:8px; font-size:13px; color:var(--muted); }
+  #stats span { background:var(--card); border:1px solid var(--line); border-radius:999px; padding:3px 10px; }
+  #stats b { color:var(--text); }
+  main { max-width:560px; margin:0 auto; padding:8px 16px 32px; }
+  .box { background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  #img { width:100%; height:min(60vh,420px); object-fit:contain; background:#000; display:block; }
+  .info { padding:8px 12px; font-size:13px; color:var(--muted); display:flex; justify-content:space-between; }
+  .btns { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+  button { font:inherit; padding:16px 8px; border-radius:12px; border:1px solid var(--line);
+           background:var(--card); color:var(--text); cursor:pointer; font-weight:600; }
+  button:active { background:var(--accent); color:#fff; }
+  button.sec { font-weight:400; color:var(--muted); padding:12px 8px; }
+  #empty { text-align:center; color:var(--muted); padding:48px 0; }
+  .tabs { display:flex; gap:8px; padding:0 16px 8px; }
+  .tabs button { padding:8px 16px; border-radius:999px; font-weight:600; }
+  .tabs button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.suggested { border:2px solid var(--accent); }
+  #sugg { padding:8px 12px; font-size:13px; color:var(--muted); min-height:34px; }
+  #sugg b { color:var(--accent); } #sugg .warn { color:#d69e2e; }
+  .mode { display:flex; gap:8px; padding:0 16px 8px; }
+  .mode button { padding:6px 14px; border-radius:8px; font-weight:400; }
+  .mode button.active { border-color:var(--accent); color:var(--accent); font-weight:600; }
+  #review { padding:0 16px 32px; } #review[hidden] { display:none; }
+  #rfilter { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  #rfilter button { padding:6px 12px; border-radius:999px; font-weight:400; }
+  #rfilter button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  #rgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+  .rc { background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .rc img { width:100%; height:140px; object-fit:contain; background:#000; display:block; }
+  .rc select { width:100%; padding:8px; border:0; border-top:1px solid var(--line); background:var(--card); color:var(--text); font:inherit; }
+  kbd { opacity:.6; font-weight:400; font-size:12px; }
+</style>
+</head>
+<body>
+<header><h1>Etichetta animali</h1><a href="/">← Eventi</a></header>
+<div class="tabs" id="tabs"><button data-kind="animale" class="active">Animali</button><button data-kind="persona">Persone</button></div>
+<div class="mode"><button id="m-label" class="active">Da etichettare</button><button id="m-review">Rivedi etichettati</button></div>
+<div id="stats"></div>
+<main>
+  <div id="card" hidden>
+    <div class="box"><img id="img" alt=""><div class="info"><span id="what"></span><span id="when"></span></div></div>
+    <div id="sugg"></div>
+    <div class="btns" id="btns"></div>
+    <div class="btns"><button class="sec" id="skip">Salta</button><button class="sec" id="undo">Annulla</button></div>
+  </div>
+  <div id="empty" hidden>Niente da etichettare 🎉<br>Torna più tardi, nuovi ritagli arrivano con i movimenti.</div>
+</main>
+<div id="review" hidden><div id="rfilter"></div><div id="rgrid"></div></div>
+
+<script>
+let kind = "animale", queue = [], labels = [], current = null, last = null, skipped = new Set();
+const $ = id => document.getElementById(id);
+
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => {
+  kind = b.dataset.kind; queue = []; skipped = new Set(); last = null;
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x === b));
+  $("btns").innerHTML = ""; refill().then(show);
+});
+
+async function refill() {
+  const d = await (await fetch(`/api/crops?kind=${kind}&limit=30`)).json();
+  labels = d.labels;
+  const have = new Set(queue.map(c => c.id));
+  d.crops.filter(c => !skipped.has(c.id) && !have.has(c.id)).forEach(c => queue.push(c));
+  $("stats").innerHTML = Object.entries(d.stats).map(([k, v]) => `<span>${k === "_da_etichettare" ? "da etichettare" : k}: <b>${v}</b></span>`).join("");
+  if (!$("btns").children.length) {
+    labels.forEach((l, i) => {
+      const b = document.createElement("button");
+      b.dataset.label = l;
+      b.innerHTML = l === "altro" ? `Altro / non valido <kbd>${i + 1}</kbd>` : `${l} <kbd>${i + 1}</kbd>`;
+      b.onclick = () => choose(l); $("btns").appendChild(b);
+    });
+  }
+}
+
+function show() {
+  current = queue[0] || null;
+  $("card").hidden = !current; $("empty").hidden = !!current;
+  document.querySelectorAll("#btns button").forEach(b => b.classList.remove("suggested"));
+  if (!current) return;
+  $("img").src = "/crop/" + current.id;
+  $("what").textContent = `YOLO: ${current.det_class} ${Math.round(current.conf * 100)}% · ${current.camera.trim()}`;
+  $("when").textContent = new Date(current.created_at).toLocaleString("it-IT", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" });
+  const sg = current.suggestion;
+  if (sg) {
+    $("sugg").innerHTML = `Suggerito: <b>${sg.label}</b> · somiglianza ${Math.round(sg.score * 100)}% · ${sg.n} esempi` +
+      (sg.provisional ? ` <span class="warn">(provvisorio, pochi esempi)</span>` : "") + ` <kbd>Invio</kbd> per accettare`;
+    document.querySelectorAll("#btns button").forEach(b => b.classList.toggle("suggested", b.dataset.label === sg.label));
+  } else {
+    $("sugg").textContent = "Nessun suggerimento (servono esempi di almeno 2 etichette diverse).";
+  }
+}
+
+async function choose(label) {
+  if (!current) return;
+  const c = current; queue.shift();
+  await fetch(`/api/crops/${c.id}/label`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ label }) });
+  last = c;
+  // suggestions improve with each label: reload the queue so the next ones use it
+  queue = []; await refill(); show();
+}
+
+$("skip").onclick = () => { if (current) { skipped.add(current.id); queue.shift(); show(); if (queue.length < 5) refill().then(show); } };
+$("undo").onclick = async () => {
+  if (!last) return;
+  await fetch(`/api/crops/${last.id}/label`, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ label: null }) });
+  last = null; queue = []; await refill(); show();
+};
+document.onkeydown = e => {
+  if (e.key === "Enter" && current && current.suggestion) return choose(current.suggestion.label);
+  const i = parseInt(e.key) - 1; if (labels[i]) choose(labels[i]);
+};
+
+// ---- review: change or remove labels already given
+let mode = "label", rlabel = null;
+$("m-label").onclick = () => setMode("label");
+$("m-review").onclick = () => setMode("review");
+function setMode(m) {
+  mode = m;
+  $("m-label").classList.toggle("active", m === "label"); $("m-review").classList.toggle("active", m === "review");
+  document.querySelector("main").hidden = m === "review"; $("review").hidden = m !== "review";
+  if (m === "review") loadReview(); else { queue = []; refill().then(show); }
+}
+document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => { if (mode === "review") { rlabel = null; loadReview(); } }));
+
+async function loadReview() {
+  const d = await (await fetch(`/api/crops?kind=${kind}&limit=1`)).json();
+  const names = d.labels.filter(l => d.stats[l]);
+  if (!names.includes(rlabel)) rlabel = names[0] || null;
+  $("rfilter").innerHTML = "";
+  names.forEach(l => {
+    const b = document.createElement("button"); b.textContent = `${l} (${d.stats[l]})`;
+    b.classList.toggle("active", l === rlabel);
+    b.onclick = () => { rlabel = l; loadReview(); }; $("rfilter").appendChild(b);
+  });
+  $("rgrid").innerHTML = "";
+  if (!rlabel) { $("rgrid").textContent = "Nessun ritaglio etichettato."; return; }
+  const r = await (await fetch(`/api/crops?kind=${kind}&label=${encodeURIComponent(rlabel)}&limit=100`)).json();
+  r.crops.forEach(c => {
+    const el = document.createElement("div"); el.className = "rc";
+    const opts = d.labels.map(l => `<option ${l === c.label ? "selected" : ""}>${l}</option>`).join("");
+    el.innerHTML = `<img loading="lazy" src="/crop/${c.id}"><select>${opts}<option value="__none">↩ Togli etichetta</option></select>`;
+    el.querySelector("select").onchange = async e => {
+      const v = e.target.value;
+      await fetch(`/api/crops/${c.id}/label`, { method:"POST", headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ label: v === "__none" ? null : v }) });
+      loadReview();
+    };
+    $("rgrid").appendChild(el);
+  });
+}
+
+
+refill().then(show);
+</script>
+</body>
+</html>

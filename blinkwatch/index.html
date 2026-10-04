@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blinkwatch</title>
+<style>
+  :root { --bg:#0f1115; --card:#181b22; --text:#e8eaf0; --muted:#8b92a3; --line:#262a34;
+          --persona:#e5484d; --veicolo:#3e8cf4; --animale:#30a46c; --none:#555c6b; --accent:#7c8cff; }
+  @media (prefers-color-scheme: light) {
+    :root { --bg:#f4f5f8; --card:#fff; --text:#1a1d24; --muted:#697085; --line:#e1e4ec; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.4 system-ui,sans-serif; }
+  header { position:sticky; top:0; z-index:5; background:var(--bg); border-bottom:1px solid var(--line);
+           padding:12px 16px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  h1 { font-size:18px; margin:0 8px 0 0; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  button.chip, select { background:var(--card); color:var(--text); border:1px solid var(--line);
+           border-radius:999px; padding:6px 12px; font:inherit; cursor:pointer; }
+  button.chip.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  select { border-radius:8px; }
+  #stat { color:var(--muted); margin-left:auto; font-size:13px; }
+  main { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; padding:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  video, .thumb { width:100%; display:block; background:#000; aspect-ratio:16/9; }
+  .thumb { object-fit:cover; }
+  .gone { color:var(--muted); font-size:12px; }
+  .meta { padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
+  .row { display:flex; justify-content:space-between; gap:8px; font-size:13px; color:var(--muted); }
+  .cam { color:var(--text); font-weight:600; }
+  .badges { display:flex; flex-wrap:wrap; gap:6px; }
+  .badge { font-size:12px; font-weight:600; color:#fff; border-radius:6px; padding:2px 8px; }
+  .badge.persona { background:var(--persona); } .badge.veicolo { background:var(--veicolo); }
+  .badge.animale { background:var(--animale); } .badge.none { background:var(--none); }
+  .badge.error, .badge.downloaded { background:#b7791f; }
+  #more { display:block; margin:0 auto 32px; }
+  #empty { text-align:center; color:var(--muted); padding:48px 16px; }
+  @media (max-width:520px) { header { padding:10px 12px; } main { padding:12px; grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Blinkwatch</h1>
+  <div class="chips" id="cats"></div>
+  <select id="cam"><option value="">Tutte le telecamere</option></select>
+  <a href="/label" style="color:var(--accent);text-decoration:none">Etichetta animali</a>
+  <span id="stat"></span>
+</header>
+<main id="grid"></main>
+<div id="empty" hidden>Nessun evento con questi filtri.</div>
+<button class="chip" id="more" hidden>Carica altri</button>
+<script>
+const CATS = [["", "Tutti"], ["persona", "Persone"], ["veicolo", "Veicoli"], ["animale", "Animali"], ["nessuna", "Nessuno"]];
+let category = "", camera = "", before = "", loading = false;
+const $ = id => document.getElementById(id);
+
+CATS.forEach(([val, label]) => {
+  const b = document.createElement("button");
+  b.className = "chip" + (val === category ? " active" : ""); b.textContent = label;
+  b.onclick = () => { category = val; document.querySelectorAll("#cats .chip").forEach(c => c.classList.toggle("active", c === b)); reset(); };
+  $("cats").appendChild(b);
+});
+$("cam").onchange = e => { camera = e.target.value; reset(); };
+$("more").onclick = () => load();
+
+function reset() { $("grid").innerHTML = ""; before = ""; load(); }
+
+function fmt(iso) {
+  return new Date(iso).toLocaleString("it-IT", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit", second:"2-digit" });
+}
+
+function card(e) {
+  const el = document.createElement("div"); el.className = "card";
+  const badges = e.categories.length
+    ? e.categories.map(c => `<span class="badge ${c}">${c}</span>`).join("")
+    : `<span class="badge ${e.status === "classified" ? "none" : e.status}">${e.status === "classified" ? "nessuno" : e.status}</span>`;
+  const det = Object.entries(e.details).map(([k, v]) => `${k} ${Math.round(v * 100)}%`).join(" · ");
+  const id = encodeURIComponent(e.id);
+  const media = e.has_video
+    ? `<video controls preload="none" poster="/thumb/${id}" src="/video/${id}"></video>`
+    : `<img class="thumb" loading="lazy" alt="" src="/thumb/${id}" onerror="this.style.visibility='hidden'">`;
+  el.innerHTML = `${media}
+    <div class="meta"><div class="row"><span class="cam"></span><span>${fmt(e.created_at)}</span></div>
+    <div class="badges">${badges}</div><div class="row"><span>${det}</span>${e.has_video ? "" : '<span class="gone">video eliminato</span>'}</div></div>`;
+  el.querySelector(".cam").textContent = e.camera;
+  return el;
+}
+
+async function load() {
+  if (loading) return; loading = true;
+  const q = new URLSearchParams({ category, camera, before, limit: 30 });
+  const data = await (await fetch("/api/events?" + q)).json();
+  if (!$("cam").dataset.filled || $("cam").options.length - 1 !== data.cameras.length) {
+    const cur = $("cam").value;
+    $("cam").innerHTML = '<option value="">Tutte le telecamere</option>' +
+      data.cameras.map(c => `<option value="${c.replace(/"/g, "&quot;")}">${c.trim()}</option>`).join("");
+    $("cam").value = cur; $("cam").dataset.filled = 1;
+  }
+  data.events.forEach(e => $("grid").appendChild(card(e)));
+  if (data.events.length) before = data.events[data.events.length - 1].created_at;
+  $("more").hidden = data.events.length < 30;
+  $("empty").hidden = $("grid").children.length > 0;
+  $("stat").textContent = data.total_classified + " clip classificate";
+  loading = false;
+}
+reset();
+setInterval(() => { if (!before || $("grid").children.length <= 30) { /* auto-refresh only when at top */ if (scrollY < 50) reset(); } }, 60000);
+</script>
+</body>
+</html>
