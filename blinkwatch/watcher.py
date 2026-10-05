@@ -3,9 +3,11 @@
 Run:  .venv/bin/python -m blinkwatch.watcher
 """
 import asyncio
+import json
 import logging
+import time
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import cv2
 from aiohttp import ClientSession
@@ -30,7 +32,7 @@ async def fetch_new_clips(blink, db):
 
 
 async def fetch_from_sync(blink, db, sync):
-    await sync.refresh()
+    # no sync.refresh() here: blink.refresh() just refreshed every sync module (and its clip list)
     if not (sync.local_storage and sync.local_storage_manifest_ready):
         log.warning("Manifest not ready for %s", sync.name)
         return
@@ -44,13 +46,16 @@ async def fetch_from_sync(blink, db, sync):
         if age > timedelta(hours=config.MAX_CLIP_AGE_HOURS):
             break  # sorted newest-first: everything after is older
         path = config.DOWNLOAD_PATH / f"{item.name}_{item.id}_{item.created_at:%Y%m%d_%H%M%S}.mp4"
+        seen_after = age.total_seconds()
+        t0 = time.monotonic()
         try:
             await download(item, blink, path)
         except Exception:
             log.exception("download failed for clip %s", item.id)
             continue
         store.add_clip(db, item.id, item.name, item.created_at, path)
-        log.info("downloaded %s", path.name)
+        log.info("downloaded %s  [timing: in manifest %.0fs after recording, download took %.0fs]",
+                 path.name, seen_after, time.monotonic() - t0)
         done += 1
         await asyncio.sleep(2)  # be gentle with the API
 
@@ -69,7 +74,11 @@ async def classify_pending(classifier, embedder, db):
             config.CROP_DIR.mkdir(parents=True, exist_ok=True)
             cv2.imwrite(str(config.CROP_DIR / rel), image, [cv2.IMWRITE_JPEG_QUALITY, 92])
             emb = await asyncio.to_thread(embedder.embed, image)
-            guess = await asyncio.to_thread(identify.predict, db, kind, emb)
+            try:  # same thread as the DB connection (sqlite objects cannot cross threads)
+                guess = identify.predict(db, kind, emb)
+            except Exception:
+                log.exception("identification failed, saving the crop without a name")
+                guess = None
             if guess:
                 preds.append((kind, *guess))
             store.add_crop(db, row["id"], row["camera"], row["created_at"], name, round(conf, 3), rel,
@@ -99,6 +108,73 @@ def delete_old_videos(db):
         log.info("deleted old video %s", video.name)
 
 
+_storage_seen = {}
+STORAGE_LOG = config.DATA_DIR / "storage_status.jsonl"  # history of USB-storage state changes, survives restarts
+
+
+def _last_known_storage():
+    known = {}
+    if STORAGE_LOG.exists():
+        for line in STORAGE_LOG.read_text().splitlines():
+            try:
+                rec = json.loads(line)
+                known[rec["module"]] = rec["to"]
+            except (ValueError, KeyError):
+                pass
+    return known
+
+
+_known_status = _last_known_storage()
+
+
+def log_storage_status(blink):
+    """Follow each sync module's USB-storage state as Blink reports it, and log every change.
+
+    blinkpy reads the state only once at startup, so a drive that breaks (or is fixed) while we run would go
+    unnoticed. Here the state is re-read from the home screen after each refresh and pushed back into blinkpy,
+    so downloads resume by themselves once Blink says the storage is "active" again.
+    """
+    sensitive = ("id", "serial", "mac", "ip", "ssid", "token", "key", "address", "lat", "lon", "network")
+    homescreen = {m.get("id"): m for m in (blink.homescreen or {}).get("sync_modules", [])}
+    for name, sync in blink.sync.items():
+        mod = homescreen.get(sync.sync_id) or {}
+        if "local_storage_status" in mod:
+            sync._local_storage["status"] = mod["local_storage_status"] == "active"
+            sync._local_storage["enabled"] = mod.get("local_storage_enabled")
+            sync._local_storage["compatible"] = mod.get("local_storage_compatible")
+        state = {
+            "cameras": sorted(c.strip() for c in sync.cameras),
+            "manifest_stale": sync._local_storage.get("manifest_stale"),
+        }
+        for k, v in mod.items():  # scalar fields Blink reports for this module (storage, wifi, firmware...)
+            if isinstance(v, (str, int, float, bool)) and (k.startswith("local_storage")
+                                                           or not any(w in k.lower() for w in sensitive)):
+                state[k] = v
+        key = {k: v for k, v in state.items() if k not in ("manifest_stale", "last_hb")}  # noisy fields
+        if _storage_seen.get(name) != key:
+            if name in _storage_seen:
+                log.warning("storage status CHANGED [%s]: %s", name, json.dumps(state, ensure_ascii=False, default=str))
+            else:
+                log.info("storage status [%s]: %s", name, json.dumps(state, ensure_ascii=False, default=str))
+            _storage_seen[name] = key
+        status = mod.get("local_storage_status")
+        if status is not None and status != _known_status.get(name):
+            prev = _known_status.get(name)
+            with open(STORAGE_LOG, "a") as f:
+                f.write(json.dumps({"time": datetime.now(timezone.utc).isoformat(), "module": name, "from": prev,
+                                    "to": status, "fw": mod.get("fw_version"), "cameras": state["cameras"]},
+                                   ensure_ascii=False) + "\n")
+            _known_status[name] = status
+            if prev is not None:  # a real change (the first record per module is just the baseline)
+                ok = status == "active"
+                notify.send_text(f"Archivio USB {name}: {status}", f"Prima: {prev}. Telecamere: {', '.join(state['cameras'])}",
+                                 priority=3 if ok else 5, tags=["white_check_mark" if ok else "warning"])
+
+
+async def cleanup(db):
+    delete_old_videos(db)  # sync on purpose: sqlite connections cannot be used from other threads
+
+
 def backfill_embeddings(embedder, db):
     """Crops with no embedding, or one from an older model (different size)."""
     for row in db.execute("SELECT id, file FROM crops WHERE embedding IS NULL OR length(embedding) != ?",
@@ -117,14 +193,24 @@ async def main():
     backfill_embeddings(embedder, db)
     async with ClientSession() as session:
         blink = await connect(session)
+        blink.refresh_rate = config.POLL_INTERVAL
         while True:
+            # independent steps: a failure in one must not stop the others (e.g. old-video cleanup)
+            times = {}
+            for name, step in (("refresh", lambda: blink.refresh()), ("fetch", lambda: fetch_new_clips(blink, db)),
+                               ("classify", lambda: classify_pending(classifier, embedder, db)),
+                               ("cleanup", lambda: cleanup(db))):
+                t0 = time.monotonic()
+                try:
+                    await step()
+                except Exception:
+                    log.exception("loop step %s failed", name)
+                times[name] = time.monotonic() - t0
             try:
-                await blink.refresh()
-                await fetch_new_clips(blink, db)
-                await classify_pending(classifier, embedder, db)
-                delete_old_videos(db)
+                log_storage_status(blink)
             except Exception:
-                log.exception("loop error")
+                log.exception("storage status logging failed")
+            log.info("loop timing: " + " ".join(f"{k} {v:.1f}s" for k, v in times.items()))
             await asyncio.sleep(config.POLL_INTERVAL)
 
 

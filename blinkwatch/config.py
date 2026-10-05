@@ -39,7 +39,7 @@ MIN_CROP_SIDE = 40  # px, ignore tiny detections
 RETENTION_HOURS = float(os.environ.get("RETENTION_HOURS", 1))  # videos older than this are deleted
 
 SYNC_MODULE_NAMES = [n.strip() for n in os.environ.get("SYNC_MODULE_NAMES", "Casa,Casa online").split(",") if n.strip()]
-POLL_INTERVAL = 30  # seconds between manifest refreshes
+POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", 60))  # seconds between Blink refreshes (kept gentle on purpose)
 MAX_CLIP_AGE_HOURS = float(os.environ.get("MAX_CLIP_AGE_HOURS", 1))  # ignore clips older than this
 MAX_CLIPS_PER_POLL = int(os.environ.get("MAX_CLIPS_PER_POLL", 5))
 

@@ -30,6 +30,13 @@ def _publish(payload):
     urllib.request.urlopen(req, timeout=10).read()
 
 
+def send_text(title, message, priority=3, tags=()):
+    """Plain notification (not tied to a clip), e.g. a storage problem on a sync module."""
+    if config.NTFY_URL and config.NTFY_TOPIC:
+        _publish({"topic": config.NTFY_TOPIC, "title": title, "message": message, "priority": priority,
+                  "tags": list(tags), "click": config.PUBLIC_URL})
+
+
 def build_items(categories, identities):
     """One dict per thing worth telling about, after the mute rules.
 
