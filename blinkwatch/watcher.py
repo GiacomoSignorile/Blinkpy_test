@@ -17,6 +17,7 @@ from .blink_client import connect, download
 from .classifier import ClipClassifier, fallback_thumb
 from .embedder import Embedder
 from . import identify, notify
+from .person_model import PersonModel
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 log = logging.getLogger("watcher")
@@ -60,7 +61,7 @@ async def fetch_from_sync(blink, db, sync):
         await asyncio.sleep(2)  # be gentle with the API
 
 
-async def classify_pending(classifier, embedder, db):
+async def classify_pending(classifier, embedder, person_model, db):
     for row in store.pending(db):
         try:
             cats, details, crops = await asyncio.to_thread(classifier.classify, row["path"], config.THUMB_DIR / f"{row['id']}.jpg")
@@ -74,8 +75,13 @@ async def classify_pending(classifier, embedder, db):
             config.CROP_DIR.mkdir(parents=True, exist_ok=True)
             cv2.imwrite(str(config.CROP_DIR / rel), image, [cv2.IMWRITE_JPEG_QUALITY, 92])
             emb = await asyncio.to_thread(embedder.embed, image)
-            try:  # same thread as the DB connection (sqlite objects cannot cross threads)
-                guess = identify.predict(db, kind, emb)
+            model_name = margin = None
+            try:
+                if kind == "persona" and person_model is not None:  # the big model: no DB access, can run in a thread
+                    label, prob, margin = await asyncio.to_thread(person_model.predict, image)
+                    guess, model_name = (label, prob), person_model.name
+                else:  # small classifier; same thread as the DB connection (sqlite objects cannot cross threads)
+                    guess = identify.predict(db, kind, emb)
             except Exception:
                 log.exception("identification failed, saving the crop without a name")
                 guess = None
@@ -83,7 +89,8 @@ async def classify_pending(classifier, embedder, db):
                 preds.append((kind, *guess))
             store.add_crop(db, row["id"], row["camera"], row["created_at"], name, round(conf, 3), rel,
                            kind=kind, embedding=emb.tobytes(),
-                           pred_label=guess[0] if guess else None, pred_conf=round(guess[1], 3) if guess else None)
+                           pred_label=guess[0] if guess else None, pred_conf=round(guess[1], 3) if guess else None,
+                           pred_model=model_name, pred_margin=round(margin, 3) if margin is not None else None)
         identities = identify.summarize(cats, preds)
         store.set_result(db, row["id"], cats, details, identities=identities)
         try:
@@ -190,6 +197,7 @@ async def main():
     db = store.connect()
     classifier = ClipClassifier()
     embedder = Embedder()
+    person_model = PersonModel.load_if_present()
     backfill_embeddings(embedder, db)
     async with ClientSession() as session:
         blink = await connect(session)
@@ -198,7 +206,7 @@ async def main():
             # independent steps: a failure in one must not stop the others (e.g. old-video cleanup)
             times = {}
             for name, step in (("refresh", lambda: blink.refresh()), ("fetch", lambda: fetch_new_clips(blink, db)),
-                               ("classify", lambda: classify_pending(classifier, embedder, db)),
+                               ("classify", lambda: classify_pending(classifier, embedder, person_model, db)),
                                ("cleanup", lambda: cleanup(db))):
                 t0 = time.monotonic()
                 try:

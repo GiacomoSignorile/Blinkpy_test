@@ -17,7 +17,13 @@ CREATE TABLE IF NOT EXISTS crops (
     kind TEXT DEFAULT 'animale',  -- animale | persona
     embedding BLOB,       -- float32 feature vector, for label suggestions
     pred_label TEXT,      -- automatic identification at the time the crop was saved
-    pred_conf REAL
+    pred_conf REAL,
+    pred_model TEXT,      -- which model produced pred_label (NULL = the old small classifier)
+    pred_margin REAL,     -- best minus second-best probability: low = a human should look first
+    auto_label TEXT,      -- offline auto-labelling (big model, trained on human labels). NEVER ground truth
+    auto_conf REAL,
+    auto_margin REAL,     -- confidence of the best label minus the second best: low = ask a human first
+    auto_accepted INTEGER DEFAULT 0  -- 1 = confident enough that it need not be labelled by hand
 );
 CREATE TABLE IF NOT EXISTS clips (
     id TEXT PRIMARY KEY,
@@ -38,7 +44,10 @@ def connect() -> sqlite3.Connection:
     db.row_factory = sqlite3.Row
     db.executescript(SCHEMA)
     for table, wanted in (("crops", (("kind", "TEXT DEFAULT 'animale'"), ("embedding", "BLOB"),
-                                     ("pred_label", "TEXT"), ("pred_conf", "REAL"))),
+                                     ("pred_label", "TEXT"), ("pred_conf", "REAL"), ("pred_model", "TEXT"),
+                                     ("pred_margin", "REAL"),
+                                     ("auto_label", "TEXT"), ("auto_conf", "REAL"), ("auto_margin", "REAL"),
+                                     ("auto_accepted", "INTEGER DEFAULT 0"))),
                           ("clips", (("identities", "TEXT DEFAULT ''"),))):
         cols = {r[1] for r in db.execute(f"PRAGMA table_info({table})")}
         for col, ddl in wanted:
@@ -78,11 +87,12 @@ def set_result(db, clip_id, categories, details, status="classified", identities
 
 
 def add_crop(db, clip_id, camera, created_at, det_class, conf, file, kind="animale", embedding=None,
-             pred_label=None, pred_conf=None):
+             pred_label=None, pred_conf=None, pred_model=None, pred_margin=None):
     cur = db.execute(
-        "INSERT INTO crops (clip_id, camera, created_at, det_class, conf, file, kind, embedding, pred_label, pred_conf)"
-        " VALUES (?,?,?,?,?,?,?,?,?,?)",
-        (str(clip_id), camera, created_at, det_class, conf, file, kind, embedding, pred_label, pred_conf),
+        "INSERT INTO crops (clip_id, camera, created_at, det_class, conf, file, kind, embedding, pred_label, pred_conf,"
+        " pred_model, pred_margin) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        (str(clip_id), camera, created_at, det_class, conf, file, kind, embedding, pred_label, pred_conf,
+         pred_model, pred_margin),
     )
     db.commit()
     return cur.lastrowid

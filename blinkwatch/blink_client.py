@@ -1,7 +1,8 @@
 import asyncio
 import logging
+from pathlib import Path
 
-from aiohttp import ClientSession
+from aiohttp import ClientError, ClientSession
 from blinkpy.auth import Auth, BlinkTwoFARequiredError
 from blinkpy.blinkpy import Blink
 from blinkpy.helpers.util import json_load
@@ -45,7 +46,27 @@ async def connect(session: ClientSession) -> Blink:
 
 
 async def download(item, blink, path):
-    """Ask the sync module to upload the clip to the cloud, then fetch it."""
-    await item.prepare_download(blink)
-    if not await item.download_video(blink, str(path)):
-        raise IOError(f"download failed for clip {item.id}")
+    """Retry the complete sync-module upload + cloud fetch, publishing atomically."""
+    path = Path(path)
+    partial = path.with_name(path.name + ".part")
+    for attempt in range(1, 3):
+        stage = "prepare-upload"
+        try:
+            await item.prepare_download(blink)
+            stage = "cloud-fetch"
+            # Split blinkpy's four fetch attempts across two fresh upload requests.
+            if not await item.download_video(blink, str(partial), max_retries=2):
+                raise IOError("Blink cloud fetch did not return HTTP 200")
+            if not partial.is_file() or partial.stat().st_size == 0:
+                raise IOError("Blink returned an empty video")
+            partial.replace(path)
+            log.info("download complete clip=%s attempt=%d", item.id, attempt)
+            return
+        except (OSError, ClientError, asyncio.TimeoutError) as exc:
+            log.warning("download attempt failed clip=%s stage=%s attempt=%d/2 error=%s",
+                        item.id, stage, attempt, type(exc).__name__)
+            if attempt == 2:
+                raise IOError(f"download failed for clip {item.id} at stage={stage} after 2 upload attempts") from exc
+        finally:
+            partial.unlink(missing_ok=True)
+        await asyncio.sleep(3)

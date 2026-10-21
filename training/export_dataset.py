@@ -16,23 +16,32 @@ NOT_IDENTITY = {"altro", "Gatto sconosciuto", "Persona conosciuta", "Persona sco
 MIN_PER_CLASS = 8  # classes with fewer examples are set aside too (too few to learn or validate)
 
 db = sqlite3.connect(ROOT / "data" / "events.db")
-rows = db.execute("SELECT id, clip_id, camera, created_at, kind, label, file FROM crops WHERE label IS NOT NULL").fetchall()
+rows = db.execute("SELECT id, clip_id, camera, created_at, kind, label, file FROM crops").fetchall()  # incl. unlabelled
 counts = {}
 for r in rows:
-    counts[(r[4], r[5])] = counts.get((r[4], r[5]), 0) + 1
+    if r[5] is not None:
+        counts[(r[4], r[5])] = counts.get((r[4], r[5]), 0) + 1
 
 if OUT.exists():
     shutil.rmtree(OUT)
 with open(OUT.parent / f"{OUT.name}_manifest.csv", "w", newline="") as mf:
     w = csv.writer(mf)
-    w.writerow(["path", "kind", "label", "identity", "clip_id", "camera", "created_at"])
+    w.writerow(["path", "kind", "label", "identity", "clip_id", "camera", "created_at", "crop_id", "label_source"])
     for cid, clip, camera, created, kind, label, file in rows:
-        identity = label not in NOT_IDENTITY and counts[(kind, label)] >= MIN_PER_CLASS
-        rel = Path(kind) / (label if identity else f"_other/{label}") / f"{cid}_{file}"
+        identity = label is not None and label not in NOT_IDENTITY and counts[(kind, label)] >= MIN_PER_CLASS
+        folder = label if identity else (f"_other/{label}" if label is not None else "_unlabeled")
+        rel = Path(kind) / folder / f"{cid}_{file}"
         (OUT / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(ROOT / "data" / "crops" / file, OUT / rel)
-        w.writerow([rel.as_posix(), kind, label, int(identity), clip, camera.strip(), created])
+        w.writerow([rel.as_posix(), kind, label or "", int(identity), clip, camera.strip(), created, cid,
+                    "human" if label is not None else ""])
 
+unlabeled = {}
+for r in rows:
+    if r[5] is None:
+        unlabeled[r[4]] = unlabeled.get(r[4], 0) + 1
+for kind, n in sorted(unlabeled.items()):
+    print(f"{kind:8s} {'(non etichettati)':20s} {n:3d}")
 for (kind, label), n in sorted(counts.items()):
     ident = label not in NOT_IDENTITY and n >= MIN_PER_CLASS
     print(f"{kind:8s} {label:20s} {n:3d} {'classe' if ident else 'a parte'}")

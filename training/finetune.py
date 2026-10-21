@@ -65,7 +65,8 @@ def load(data_dir, kind):
     imgs = [Image.open(data_dir / r["path"]).convert("RGB") for r in rows]
     ys = [classes.index(r["label"]) for r in rows]
     clips = [r["clip_id"] for r in rows]
-    return classes, imgs, np.array(ys), clips
+    times = [r["created_at"] for r in rows]
+    return classes, imgs, np.array(ys), clips, times
 
 
 def group_split(ys, clips, seed, val_frac=0.25):
@@ -81,6 +82,21 @@ def group_split(ys, clips, seed, val_frac=0.25):
     val = [i for i, c in enumerate(clips) if c in val_clips]
     train = [i for i, c in enumerate(clips) if c not in val_clips]
     return train, val
+
+
+def time_split(clips, times, fold, cuts=(0.6, 0.7, 0.8), window=0.2):
+    """Train on the oldest clips, validate on the next ones - what happens when the system is really used.
+
+    fold i: train = first cuts[i] of the clips in time order, validation = the following `window` of them.
+    """
+    first = {}
+    for c, t in zip(clips, times):
+        first[c] = min(first.get(c, t), t)
+    order = sorted(first, key=first.get)
+    n = len(order)
+    lo, hi = round(n * cuts[fold]), round(n * (cuts[fold] + window))
+    train_clips, val_clips = set(order[:lo]), set(order[lo:hi])
+    return ([i for i, c in enumerate(clips) if c in train_clips], [i for i, c in enumerate(clips) if c in val_clips])
 
 
 @torch.no_grad()
@@ -138,8 +154,11 @@ def main():
     ap.add_argument("--data", required=True); ap.add_argument("--kind", default="animale")
     ap.add_argument("--splits", type=int, default=5); ap.add_argument("--epochs", type=int, default=15)
     ap.add_argument("--models", default="S,B")
+    ap.add_argument("--split", choices=["group", "time"], default="group",
+                    help="group: random clips held out; time: train on older clips, validate on newer")
     a = ap.parse_args()
-    classes, imgs, ys, clips = load(Path(a.data), a.kind)
+    classes, imgs, ys, clips, times = load(Path(a.data), a.kind)
+    n_splits = 3 if a.split == "time" else a.splits
     n = len(classes)
     print(f"{a.kind}: {len(imgs)} crops, {len(set(clips))} clips, classes: " +
           ", ".join(f"{c}={int((ys == i).sum())}" for i, c in enumerate(classes)))
@@ -148,8 +167,8 @@ def main():
         backbone = timm.create_model(MODELS[name], pretrained=True, num_classes=0, img_size=224).to(dev)
         feats = features(backbone, imgs)
         del backbone
-        for s in range(a.splits):
-            tr, va = group_split(ys, clips, s)
+        for s in range(n_splits):
+            tr, va = time_split(clips, times, s) if a.split == "time" else group_split(ys, clips, s)
             ytr, yva = ys[tr], ys[va]
             runs = {
                 f"A  {name} frozen + kNN(top3)": knn_predict(feats[tr], ytr, feats[va]),
@@ -163,7 +182,7 @@ def main():
                 r["acc"].append((p == yva).mean()); r["bacc"].append(balanced_accuracy_score(yva, p))
                 r["y"] += list(yva); r["p"] += list(p)
             print(f"  model {name} split {s}: train={len(tr)} val={len(va)}  (finetune {time.time() - t:.0f}s)", flush=True)
-    print(f"\n=== {a.kind}: {a.splits} splits per clip, validation ≈ 25% ===")
+    print(f"\n=== {a.kind}: " + (f"{n_splits} temporal folds (train on older, validate on newer clips)" if a.split == "time" else f"{n_splits} splits per clip, validation ≈ 25%") + " ===")
     print(f"{'method':38s} {'accuracy':>16s} {'balanced acc.':>16s}")
     for key, r in results.items():
         print(f"{key:38s} {np.mean(r['acc']) * 100:6.1f}% ± {np.std(r['acc']) * 100:4.1f}  {np.mean(r['bacc']) * 100:6.1f}% ± {np.std(r['bacc']) * 100:4.1f}")
@@ -175,7 +194,7 @@ def main():
         row = [(p[y == i] == j).sum() for j in range(n)]
         print(f"{c[:11]:11s}" + "".join(f"{v:9d}" for v in row) + f"   recall {row[i] / max(1, sum(row)) * 100:5.1f}%")
     json.dump({k: {"acc": v["acc"], "bacc": v["bacc"]} for k, v in results.items()} | {"classes": classes},
-              open(f"results_{a.kind}.json", "w"), indent=1, default=float)
+              open(f"results_{a.kind}_{a.split}.json", "w"), indent=1, default=float)
 
 
 if __name__ == "__main__":

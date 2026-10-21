@@ -10,9 +10,10 @@ import numpy as np
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 
-from . import config, identify, store
+from . import config, identify, power, store
 
 app = FastAPI(title="Blinkwatch")
+app.include_router(power.router)
 PAGE = Path(__file__).with_name("index.html")
 
 
@@ -104,22 +105,39 @@ def label_page():
 
 @app.get("/api/crops")
 def crops(kind: str = "animale", label: str = "", limit: int = 20):
-    """label='' -> unlabelled crops (newest first); otherwise crops with that label."""
+    """label='' -> crops still to label (the least sure first, then newest);
+    label='auto:<name>' -> crops auto-labelled <name> and not yet checked by a human;
+    otherwise -> crops a human labelled with that label."""
     if kind not in config.LABELS:
         raise HTTPException(400, "unknown kind")
     db = store.connect()
     try:
-        if label:
+        if label.startswith("auto:"):
+            rows = db.execute("SELECT * FROM crops WHERE kind=? AND label IS NULL AND auto_accepted=1 AND auto_label=?"
+                              " ORDER BY auto_conf ASC LIMIT ?", (kind, label[5:], limit)).fetchall()
+        elif label:
             rows = db.execute("SELECT * FROM crops WHERE kind=? AND label=? ORDER BY id DESC LIMIT ?",
                               (kind, label, limit)).fetchall()
-        else:
-            rows = db.execute("SELECT * FROM crops WHERE kind=? AND label IS NULL ORDER BY id DESC LIMIT ?",
-                              (kind, limit)).fetchall()
-        stats = {r[0] or "_da_etichettare": r[1] for r in db.execute(
-            "SELECT label, COUNT(*) FROM crops WHERE kind=? GROUP BY label", (kind,))}
-        sugg = {} if label else suggest(db, kind, rows)
+        else:  # not labelled and not confidently auto-labelled; unknown margin last
+            rows = db.execute("SELECT * FROM crops WHERE kind=? AND label IS NULL AND COALESCE(auto_accepted,0)=0"
+                              " ORDER BY COALESCE(pred_margin, auto_margin) IS NULL, COALESCE(pred_margin, auto_margin) ASC, id DESC LIMIT ?", (kind, limit)).fetchall()
+        stats = {r[0]: r[1] for r in db.execute(
+            "SELECT label, COUNT(*) FROM crops WHERE kind=? AND label IS NOT NULL GROUP BY label", (kind,))}
+        stats["_da_etichettare"] = db.execute(
+            "SELECT COUNT(*) FROM crops WHERE kind=? AND label IS NULL AND COALESCE(auto_accepted,0)=0", (kind,)).fetchone()[0]
+        for name, n in db.execute("SELECT auto_label, COUNT(*) FROM crops WHERE kind=? AND label IS NULL AND auto_accepted=1"
+                                  " GROUP BY auto_label", (kind,)):
+            stats[f"auto:{name}"] = n
+        sugg = {} if (label and not label.startswith("auto:")) else suggest(db, kind, rows)
     finally:
         db.close()
+    for r in rows:  # the big models beat the small live one: prefer their answer when there is one
+        if r["label"] is None and r["pred_model"]:  # fine-tuned model, saved when the crop was made / re-scored
+            sugg[r["id"]] = {"label": r["pred_label"], "score": round(r["pred_conf"], 3), "n": None,
+                             "provisional": False, "source": "auto"}
+        elif r["label"] is None and r["auto_label"] is not None:
+            sugg[r["id"]] = {"label": r["auto_label"], "score": round(r["auto_conf"], 3), "n": None,
+                             "provisional": False, "source": "auto"}
     crops = [{**{k: r[k] for k in r.keys() if k != "embedding"}, "suggestion": sugg.get(r["id"])} for r in rows]
     return {"labels": config.LABELS[kind], "stats": stats, "crops": crops}
 

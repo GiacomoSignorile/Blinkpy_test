@@ -44,7 +44,7 @@ MAX_CLIP_AGE_HOURS = float(os.environ.get("MAX_CLIP_AGE_HOURS", 1))  # ignore cl
 MAX_CLIPS_PER_POLL = int(os.environ.get("MAX_CLIPS_PER_POLL", 5))
 
 # Classifier
-MODEL = os.environ.get("YOLO_MODEL", "yolov8m.pt")
+MODEL = os.environ.get("YOLO_MODEL", "yolo26m.pt")
 SAMPLE_FPS = float(os.environ.get("SAMPLE_FPS", 4))
 CONF_THRESHOLD = 0.4
 
@@ -66,8 +66,12 @@ NOTIFY_COOLDOWN_ANIMAL = int(os.environ.get("NOTIFY_COOLDOWN_ANIMAL", 600))
 # Below this confidence an identification is reported as "not recognised" instead of a name
 # (measured on held-out clips: cats 50% -> ~93% right on 83% of cases; people 60% -> ~85% right on 33% of cases)
 IDENTITY_MIN_CONF = {"animale": float(os.environ.get("IDENTITY_MIN_CONF_ANIMALE", 0.5)),
-                     "persona": float(os.environ.get("IDENTITY_MIN_CONF_PERSONA", 0.6))}
+                     "persona": float(os.environ.get("IDENTITY_MIN_CONF_PERSONA", 0.5))}
 NOTIFY_COOLDOWN = int(os.environ.get("NOTIFY_COOLDOWN", 120))  # seconds, per camera and category
 NOTIFY_MAX_AGE = int(os.environ.get("NOTIFY_MAX_AGE", 600))  # skip clips older than this (backlog, reclassification)
 NOTIFY_PRIORITY = {"persona": 4, "veicolo": 3, "animale": 2}
 NOTIFY_TAGS = {"persona": "bust_in_silhouette", "veicolo": "car", "animale": "paw_prints"}
+
+# Person identification model (CLIP-L fine-tuned); absent file = fall back to the small DINOv2 classifier
+PERSON_MODEL = Path(os.environ.get("PERSON_MODEL", DATA_DIR / "models" / "persona_clipL_v1.pt"))
+TORCH_THREADS = int(os.environ.get("TORCH_THREADS", 6))

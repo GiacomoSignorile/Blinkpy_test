@@ -8,6 +8,10 @@ x-common: &common
     DATA_DIR: /data
     DOWNLOAD_PATH: /home/giacomo/Documenti/Recordings
     NTFY_URL: http://ntfy
+    # v3 is less confident than v1 on real clips (at 0.5 it named 15/80 recent crops, v1 26/80). Threshold 0.35: held-out precision 95.1%/93.0%
+    # (time/group folds), same as v1 at 0.5. To roll back: delete these two lines (defaults: v1 at 0.5).
+    PERSON_MODEL: /data/models/persona_clipL_v3.pt
+    IDENTITY_MIN_CONF_PERSONA: "0.35"
   volumes:
     - ./data:/data
     - /home/giacomo/Documenti/Recordings:/home/giacomo/Documenti/Recordings

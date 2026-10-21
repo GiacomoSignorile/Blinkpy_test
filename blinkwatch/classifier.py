@@ -1,7 +1,10 @@
 """Classify a video clip as containing persone / veicoli / animali using YOLO."""
 import math
+import logging
 
 import cv2
+
+log = logging.getLogger(__name__)
 from ultralytics import YOLO
 
 from . import config
@@ -23,16 +26,54 @@ class ClipClassifier:
         if not cap.isOpened():
             raise IOError(f"cannot open video {path}")
         fps = cap.get(cv2.CAP_PROP_FPS) or 25
+        frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        duration_ms = frame_count * 1000.0 / fps if frame_count > 0 else None
         step = max(1, round(fps / config.SAMPLE_FPS))
         details: dict[str, float] = {}
         best_score, best_frame, first_frame = 0.0, None, None
         candidates = []  # (quality, frame_idx, class_name, crop, conf) of animal detections
         i = 0
+        last_good_ms = 0.0
+        recovery_attempts = 0
+        stalled_frames = 0
+        recoveries = 0
+
+        def seek_forward():
+            nonlocal recovery_attempts, stalled_frames, recoveries
+            recovery_attempts += 1
+            remaining_ms = duration_ms - last_good_ms if duration_ms is not None else None
+            if (recovery_attempts > 10
+                    or (remaining_ms is not None and remaining_ms <= max(150.0, 2000.0 / fps))):
+                return False
+            # OpenCV may report a successful seek but snap back to the same earlier
+            # keyframe. Increase the target on each retry instead of looping that GOP.
+            target_ms = last_good_ms + min(1000.0 * recovery_attempts, 10000.0)
+            if not cap.set(cv2.CAP_PROP_POS_MSEC, target_ms):
+                return False
+            recoveries += 1
+            stalled_frames = 0
+            return True
+
         try:
             while True:
                 ok, frame = cap.read()
                 if not ok:
-                    break
+                    # Some Blink clips contain empty H.264 access units between GOPs.
+                    # Keep the retry budget until the decode position really advances.
+                    if not seek_forward():
+                        break
+                    continue
+                position_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
+                if position_ms <= last_good_ms:
+                    # A seek can return frames from the previous GOP. Do not classify
+                    # duplicates; after a bounded run, seek farther ahead.
+                    stalled_frames += 1
+                    if stalled_frames >= 10 and not seek_forward():
+                        break
+                    continue
+                stalled_frames = 0
+                recovery_attempts = 0
+                last_good_ms = position_ms
                 if i % step == 0:
                     res = self.model(frame, conf=config.CONF_THRESHOLD, verbose=False)[0]
                     if first_frame is None:
@@ -51,6 +92,9 @@ class ClipClassifier:
                 i += 1
         finally:
             cap.release()
+        if recoveries:
+            log.info("recovered via %d seek(s) in %s; decoded %d frames",
+                     recoveries, path, i)
         if thumb_path is not None:
             save_thumb(best_frame if best_frame is not None else first_frame, thumb_path)
         return {config.CATEGORIES[n] for n in details}, details, pick_crops(candidates, step)

@@ -76,7 +76,10 @@ async function refill() {
   labels = d.labels;
   const have = new Set(queue.map(c => c.id));
   d.crops.filter(c => !skipped.has(c.id) && !have.has(c.id)).forEach(c => queue.push(c));
-  $("stats").innerHTML = Object.entries(d.stats).map(([k, v]) => `<span>${k === "_da_etichettare" ? "da etichettare" : k}: <b>${v}</b></span>`).join("");
+  const auto = Object.entries(d.stats).filter(([k]) => k.startsWith("auto:")).reduce((n, [, v]) => n + v, 0);
+  $("stats").innerHTML = Object.entries(d.stats).filter(([k]) => !k.startsWith("auto:"))
+    .map(([k, v]) => `<span>${k === "_da_etichettare" ? "da etichettare" : k}: <b>${v}</b></span>`).join("")
+    + (auto ? `<span>auto-etichettate: <b>${auto}</b></span>` : "");
   if (!$("btns").children.length) {
     labels.forEach((l, i) => {
       const b = document.createElement("button");
@@ -97,7 +100,8 @@ function show() {
   $("when").textContent = new Date(current.created_at).toLocaleString("it-IT", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" });
   const sg = current.suggestion;
   if (sg) {
-    $("sugg").innerHTML = `Suggerito: <b>${sg.label}</b> · confidenza ${Math.round(sg.score * 100)}% · ${sg.n} esempi` +
+    $("sugg").innerHTML = `Suggerito${sg.source === "auto" ? " dal modello grande" : ""}: <b>${sg.label}</b> · confidenza ${Math.round(sg.score * 100)}%` +
+      (sg.n ? ` · ${sg.n} esempi` : "") +
       (sg.provisional ? ` <span class="warn">(provvisorio, pochi esempi)</span>` : "") + ` <kbd>Invio</kbd> per accettare`;
     document.querySelectorAll("#btns button").forEach(b => b.classList.toggle("suggested", b.dataset.label === sg.label));
   } else {
@@ -139,11 +143,12 @@ document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click
 
 async function loadReview() {
   const d = await (await fetch(`/api/crops?kind=${kind}&limit=1`)).json();
-  const names = d.labels.filter(l => d.stats[l]);
+  const names = d.labels.filter(l => d.stats[l]).concat(Object.keys(d.stats).filter(k => k.startsWith("auto:")).sort());
   if (!names.includes(rlabel)) rlabel = names[0] || null;
   $("rfilter").innerHTML = "";
   names.forEach(l => {
-    const b = document.createElement("button"); b.textContent = `${l} (${d.stats[l]})`;
+    const b = document.createElement("button");
+    b.textContent = l.startsWith("auto:") ? `auto · ${l.slice(5)} (${d.stats[l]})` : `${l} (${d.stats[l]})`;
     b.classList.toggle("active", l === rlabel);
     b.onclick = () => { rlabel = l; loadReview(); }; $("rfilter").appendChild(b);
   });
@@ -152,7 +157,7 @@ async function loadReview() {
   const r = await (await fetch(`/api/crops?kind=${kind}&label=${encodeURIComponent(rlabel)}&limit=100`)).json();
   r.crops.forEach(c => {
     const el = document.createElement("div"); el.className = "rc";
-    const opts = d.labels.map(l => `<option ${l === c.label ? "selected" : ""}>${l}</option>`).join("");
+    const opts = d.labels.map(l => `<option ${l === (c.label || c.auto_label) ? "selected" : ""}>${l}</option>`).join("");
     el.innerHTML = `<img loading="lazy" src="/crop/${c.id}"><select>${opts}<option value="__none">↩ Togli etichetta</option></select>`;
     el.querySelector("select").onchange = async e => {
       const v = e.target.value;
