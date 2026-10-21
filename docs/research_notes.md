@@ -253,3 +253,24 @@ Same 1538 held-out human crops. Precision / coverage:
 Conclusion: big features lift everything (baseline 95.5% precision at 39% coverage), but the plain logistic
 regression with a global threshold is still the best; label spreading, per-class thresholds and kNN reject
 do not help. Don't build on them; try the fine-tuning ideas (LP-FT + LLRD, soups, SigLIP2/PE) next.
+
+## Experiment 3 (training/ft_experiments.py, CLIP-L, RTX 5070, human labels only, export5, 15 epochs)
+Balanced accuracy, mean ± std over 3 folds per protocol (v3 reference from earlier runs: group 75.9%, time 78.1%).
+
+| recipe | group | time |
+|---|---|---|
+| base (current recipe) | 76.9 ± 3.7 | 69.2 ± 8.0 |
+| lpft | 73.2 ± 2.0 | 66.1 ± 10.4 |
+| lpft_llrd | 73.8 ± 3.3 | 62.7 ± 8.1 |
+| lpft_aug | 76.9 ± 3.4 | 64.9 ± 15.0 |
+| full (lpft+llrd+aug) | 75.7 ± 3.8 | 66.1 ± 11.7 |
+| wise_base | 72.1 ± 1.6 | 59.6 ± 8.4 |
+| wise_lpft_aug | 75.9 ± 4.3 | 69.1 ± 8.3 |
+| wise_full | 72.9 ± 2.6 | 68.1 ± 5.3 |
+
+Conclusion: no recipe beats the current one. Differences are within the fold-to-fold spread (3-15 points), so
+nothing here is significant. WiSE-FT at alpha 0.5 does not help; LP-FT, LLRD and the harder augmentation
+do not help either. The `base` time number (69.2%) is far below the v3 reference (78.1%): the folds/data
+differ (export5 vs the export used for v3), so only compare recipes within this table.
+Next with real potential: more human labels (active learning on the review queue), backbones (SigLIP2/PE),
+model soup over seeds, and more folds to reduce noise.
