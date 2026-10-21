@@ -141,6 +141,7 @@ def main():
     ap.add_argument("--data", required=True)
     ap.add_argument("--kind", default="persona")
     ap.add_argument("--backbone", default="vit_small_patch14_dinov2.lvd142m")
+    ap.add_argument("--combo", help="reuse autolabel.py's cached features, e.g. dinov2_L+clip_L")
     a = ap.parse_args()
     data = Path(a.data)
     rows = [r for r in csv.DictReader(open(data.parent / f"{data.name}_manifest.csv")) if r["kind"] == a.kind]
@@ -151,7 +152,9 @@ def main():
     U = [i for i, l in enumerate(labels) if l == ""]
     print(f"{a.kind}: {len(H)} human-labelled crops in {len(classes)} classes, {len(U)} unlabelled")
     cache = data.parent / f"feat_v2_{a.backbone}_{len(rows)}.npy"
-    if cache.exists():
+    if a.combo:
+        X = np.hstack([np.load(data.parent / f"feat_{n}_{len(rows)}.npy") for n in a.combo.split("+")])
+    elif cache.exists():
         X = np.load(cache)
     else:
         dev = "cuda" if torch.cuda.is_available() else "cpu"

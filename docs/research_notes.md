@@ -238,3 +238,18 @@ Deprioritized for now: FLYP (needs good class text, weak fit for anonymous ident
 Conclusion: on small frozen features none beats the baseline; no strategy reaches the target precision.
 Per-class thresholds are noisy (inner split too small); label spreading is hurt by weak features.
 Next: rerun on the GPU server with DINOv2-L/G + CLIP-L features (autolabel.py combos), and tune spread k/alpha.
+
+## Experiment 2 (same script on the RTX 5070 server, cached big features, `--combo`)
+Same 1538 held-out human crops. Precision / coverage:
+
+| strategy | DINOv2-L+CLIP-L @0.90 | @0.95 | DINOv2-G+CLIP-L @0.90 | @0.95 |
+|---|---|---|---|---|
+| lr (baseline) | 91.5% / 58% | 95.5% / 39% | 89.6% / 60% | 93.7% / 39% |
+| lr + per-class thr | 88.5% / 51% | 90.7% / 44% | 88.9% / 51% | 91.2% / 44% |
+| label spreading | 77.2% / 17% | 75.1% / 13% | 80.1% / 14% | 80.0% / 11% |
+| blend | 87.6% / 36% | 87.8% / 31% | 89.8% / 36% | 89.6% / 35% |
+| blend + kNN reject | 87.2% / 34% | 87.5% / 30% | 90.8% / 35% | 90.6% / 34% |
+
+Conclusion: big features lift everything (baseline 95.5% precision at 39% coverage), but the plain logistic
+regression with a global threshold is still the best; label spreading, per-class thresholds and kNN reject
+do not help. Don't build on them; try the fine-tuning ideas (LP-FT + LLRD, soups, SigLIP2/PE) next.
