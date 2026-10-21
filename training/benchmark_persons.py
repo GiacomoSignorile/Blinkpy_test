@@ -36,6 +36,7 @@ CLIP = ((0.4815, 0.4578, 0.4082), (0.2686, 0.2613, 0.2758))
 ARCH = {
     "dinov2_B": ("vit_base_patch14_dinov2.lvd142m", {"img_size": 224}, IMAGENET, 32, False),
     "clip_L": ("vit_large_patch14_clip_224.openai", {}, CLIP, 16, True),
+    "pe_core_L": ("vit_pe_core_large_patch14_336.fb", {}, IMAGENET, 8, True),
 }
 TAU = 0.75
 NAMED = ("Domenico", "Io", "Lucrezia", "Mamma", "Papà", "Rossana")
@@ -52,10 +53,10 @@ class DS(torch.utils.data.Dataset):
         return self.tf(self.imgs[i]), int(self.ys[i])
 
 
-def transforms(mean, std):
-    ev = T.Compose([T.Lambda(pad_square), T.Resize((224, 224), interpolation=T.InterpolationMode.BICUBIC),
+def transforms(mean, std, size=(224, 224)):
+    ev = T.Compose([T.Lambda(pad_square), T.Resize(size, interpolation=T.InterpolationMode.BICUBIC),
                     T.ToTensor(), T.Normalize(mean, std)])
-    tr = T.Compose([T.Lambda(pad_square), T.RandomResizedCrop(224, scale=(0.6, 1.0), ratio=(0.85, 1.2)),
+    tr = T.Compose([T.Lambda(pad_square), T.RandomResizedCrop(size, scale=(0.6, 1.0), ratio=(0.85, 1.2)),
                     T.RandomHorizontalFlip(), T.RandomApply([T.ColorJitter(0.3, 0.3, 0.2)], p=0.8),
                     T.RandomGrayscale(0.3), T.ToTensor(), T.Normalize(mean, std)])
     return ev, tr

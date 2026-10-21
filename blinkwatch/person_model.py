@@ -26,11 +26,12 @@ class PersonModel:
         self.classes = ck["classes"]
         self.meta = ck.get("meta", {})
         self.name = path.stem  # e.g. persona_clipL_v1, saved next to every prediction
+        self.input_size = tuple(ck.get("input_size", (224, 224)))
         backbone = timm.create_model(ck["arch"], pretrained=False, num_classes=0, **ck["arch_kwargs"])
         net = nn.Sequential(backbone, nn.Linear(backbone.num_features, len(self.classes)))
         net.load_state_dict({k: v.float() for k, v in ck["state"].items()})
         self.net = net.eval()
-        self.transform = T.Compose([T.Lambda(pad_square), T.Resize((224, 224), interpolation=T.InterpolationMode.BICUBIC),
+        self.transform = T.Compose([T.Lambda(pad_square), T.Resize(self.input_size, interpolation=T.InterpolationMode.BICUBIC),
                                     T.ToTensor(), T.Normalize(tuple(ck["mean"]), tuple(ck["std"]))])
         torch.set_num_threads(config.TORCH_THREADS)
 

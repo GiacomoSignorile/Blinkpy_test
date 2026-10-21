@@ -274,3 +274,77 @@ do not help either. The `base` time number (69.2%) is far below the v3 reference
 differ (export5 vs the export used for v3), so only compare recipes within this table.
 Next with real potential: more human labels (active learning on the review queue), backbones (SigLIP2/PE),
 model soup over seeds, and more folds to reduce noise.
+
+## Experiment 4: matched PE Core-L vs CLIP-L fine-tuning (export5)
+
+Human labels only: 569 crops, 9 classes. Both models used the same 10-epoch recipe, 3-seed softmax
+ensemble per fold, and identical splits: 5 clip-grouped folds (seeds 0-4) plus 3 temporal folds.
+Metrics are balanced accuracy, mean ± population standard deviation across folds.
+
+| backbone | group | time |
+|---|---:|---:|
+| CLIP-L | 76.4 ± 5.4 | 66.0 ± 10.9 |
+| PE Core-L | 81.3 ± 2.9 | 77.0 ± 15.6 |
+
+Paired fold deltas (PE minus CLIP-L, percentage points): group +5.2, +7.1, +9.6, -6.6, +9.2
+(mean +4.9); time +15.5, +13.3, +4.2 (mean +11.0). The means favor PE, but this is descriptive
+only: the main matched comparison has just three overlapping temporal windows, and PE's temporal
+standard deviation is 15.6 points.
+In the weakest temporal window, PE scored 55.0% vs CLIP-L 50.8%; both got 0/6 held-out “Io” crops
+correct. “Lucrezia” and “Persona conosciuta” had no validation examples in that window. Do not treat
+the average gain as evidence that PE is production-ready.
+
+### Additional rolling-origin temporal stress folds
+
+Two earlier rolling windows were added (train on the oldest 40% or 50% of clips; validate on the next
+20%). Results: at 40%, CLIP-L 35.7% / PE 43.7% balanced accuracy; at 50%, CLIP-L 71.3% / PE 84.5%.
+The 40% training prefix contains no “Lucrezia” crops and only 7 “Io” crops, while its validation set
+contains 10 Lucrezia crops. Keep this as an early-history stress test, not an apples-to-apples estimate
+of steady-state model quality. The 50% window contains training examples from all classes.
+
+### Frozen PE features for pseudo-labeling
+
+Extracted normalized PE Core-L features for all 1,894 persona rows (569 human-labelled + 1,325
+unlabelled), 1,024 dimensions. `autolabel_v2.py` evaluation used held-out human labels only (1,538
+evaluated predictions across its grouped splits); the plain global-threshold logistic-regression results:
+
+| features | precision @0.90 | coverage @0.90 | precision @0.95 | coverage @0.95 |
+|---|---:|---:|---:|---:|
+| PE Core-L | 93.6% | 73% | 94.4% | 68% |
+| DINOv2-L + CLIP-L baseline | 91.5% | 58% | 95.5% | 39% |
+
+PE gives higher coverage and slightly higher precision at the 0.90 operating point. At the 0.95 target,
+PE reaches only 94.4%, below the target, despite 68% coverage; it does not replace the baseline for a
+strict ≥95% precision requirement. No human labels or database auto-labels were changed.
+
+### Watcher integration smoke test (not a deploy candidate)
+
+Added `--model pe_core_L` to `training/train_final.py` while retaining CLIP-L as the default, and made
+the checkpoint carry its native input size so `PersonModel` uses 336×336 for PE and keeps 224×224 for
+legacy checkpoints. A one-epoch artifact-smoke run trained on the 569 human labels and produced a
+632,320,879-byte checkpoint; the real checkpoint loaded through `PersonModel` at 336×336 and completed
+inference on a human crop. The remote training venv lacks OpenCV, so that final smoke call supplied a
+minimal BGR→RGB conversion shim; no production watcher/container was changed. The artifact deliberately
+skipped validation and threshold selection and must not be deployed.
+
+Local tests after the watcher change: 9/9 passed with `unittest`; `pytest` is not installed in the local
+venv. No production model was changed.
+
+## Experiment 4 (training/backbone_bench.py: frozen backbones, logistic regression, 10 group + 3 time folds)
+Balanced accuracy group / time: PE core L 75.3 / 78.9 (best), EVA02-CLIP L 68.1 / 62.8, CLIP-L 65.0 / 65.9,
+DINOv3 L 64.7 / 58.6, SigLIP2 so400m 64.4 / 61.5, SigLIP2 L 59.3 / 52.3, DINOv2-L 56.1 / 57.2.
+Pairs are no better than PE alone (best pair PE+SigLIP2 so400m 73.2 / 74.6).
+
+## Experiment 5 (training/ft_backbones.py: PE core L 336px fine-tuned, 3 seeds per fold, 10 epochs, same folds as Exp. 3)
+| | group | time |
+|---|---|---|
+| single seed | 80.4 ± 2.2 | 74.8 ± 12.9 |
+| seed ensemble | 80.8 ± 1.7 | 77.3 ± 16.0 |
+| model soup | 80.9 ± 1.3 | 75.2 ± 15.9 |
+| CLIP-L base (Exp. 3) | 76.9 ± 3.7 | 69.2 ± 8.0 |
+
+Per fold (single seed): group 83.4 / 78.4 / 79.3 vs CLIP-L base 79.6 / 79.4 / 71.6; time 83.9 / 83.9 / 56.6 vs 63.9 / 80.5 / 63.2.
+Conclusion: PE core L beats CLIP-L by ~4 points on group folds and ~6-8 on time folds on average, better in 4 of 6
+folds, but the time protocol is very noisy (fold 2 is bad for every model). Soup ≈ ensemble ≈ single, so the
+soup is not worth the cost; an ensemble only helps clearly on time folds 0-1. PE is the best candidate to replace CLIP-L
+(not yet ported to the watcher; production model unchanged). Cost: 336px, ~3 min per training run.
