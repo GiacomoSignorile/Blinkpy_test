@@ -155,12 +155,14 @@ function signal(level, max = 5) {
   const n = Math.max(0, Math.min(max, Number(level) || 0));
   return `<span class="signal" aria-hidden="true">${Array.from({ length: max }, (_, i) => `<i class="${i < n ? 'on' : ''}" style="height:${4 + i * 2}px"></i>`).join('')}</span>`;
 }
+// Blink gives the voltage as an integer in hundredths of a volt (171 = 1.71 V); the unit is not documented, so it is best read as a comparison between cameras
+const volts = v => (Number(v) / 100).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' V';
 function blinkTags(c) {
   const b = c.blink; if (!b) return '';
   const out = [];
   if (b.battery !== undefined && b.battery !== null) {
     const low = String(b.battery).toLowerCase() !== 'ok';
-    out.push(`<span class="tag ${low ? 'bad' : 'good'}">Batteria ${low ? 'scarica' : 'ok'}${b.battery_level != null ? ` · ${esc(b.battery_level)}%` : ''}</span>`);
+    out.push(`<span class="tag ${low ? 'bad' : 'good'}">Batteria ${low ? 'scarica' : 'ok'}${b.battery_voltage ? ` · ${volts(b.battery_voltage)}` : ''}${b.battery_level != null ? ` · ${esc(b.battery_level)}%` : ''}</span>`);
   } else if (b.battery_level != null) out.push(`<span class="tag">Batteria ${esc(b.battery_level)}%</span>`);
   if (b.wifi_strength != null) {  // Blink reports dBm for cameras (-50 excellent ... -80 weak)
     const d = Number(b.wifi_strength), bars = d >= -50 ? 5 : d >= -60 ? 4 : d >= -70 ? 3 : d >= -80 ? 2 : 1;
@@ -195,7 +197,7 @@ function render(d) {
   const todayN = cams.reduce((a, c) => a + c.today, 0);
   $('sub').textContent = `${todayN} clip oggi${quiet.length ? ` · ${quiet.length} silenziose` : ''}${stalled.length ? ` · ${stalled.length} ferme` : ''}`;
   const lowBat = cams.filter(c => c.blink && String(c.blink.battery).toLowerCase() === 'low');
-  $('alerts').innerHTML = lowBat.map(c => `<div class="alert warn"><b>🔋</b><div><b>${esc(short(c.camera))}: batteria scarica</b><span>Sostituisci le pile (${c.blink.battery_voltage ? (c.blink.battery_voltage / 100).toFixed(2) + ' V' : 'livello basso'}).</span></div></div>`).join('') + stalled.map(c => `<div class="alert"><b>!</b><div><b>${esc(short(c.camera))} non registra da ${dur(c.age_s)}</b><span>Di solito una clip ogni ${gap(c.expected_gap_s)}. Controlla batteria e Wi-Fi nell'app Blink.</span></div></div>`).join('')
+  $('alerts').innerHTML = lowBat.map(c => `<div class="alert warn"><b>🔋</b><div><b>${esc(short(c.camera))}: batteria scarica</b><span>Sostituisci le pile (${c.blink.battery_voltage ? volts(c.blink.battery_voltage) : 'livello basso'}).</span></div></div>`).join('') + stalled.map(c => `<div class="alert"><b>!</b><div><b>${esc(short(c.camera))} non registra da ${dur(c.age_s)}</b><span>Di solito una clip ogni ${gap(c.expected_gap_s)}. Controlla batteria e Wi-Fi nell'app Blink.</span></div></div>`).join('')
     + quiet.map(c => `<div class="alert warn"><b>i</b><div><b>${esc(short(c.camera))} è silenziosa da ${dur(c.age_s)}</b><span>Può essere normale se non passa nessuno.</span></div></div>`).join('');
   $('cams').innerHTML = cams.map(card).join('');
   $('mods-title').hidden = !d.modules.length;
