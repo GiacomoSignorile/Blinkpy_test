@@ -2,119 +2,425 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#dfeaf3">
 <title>Blinkwatch</title>
 <style>
-  :root { --bg:#0f1115; --card:#181b22; --text:#e8eaf0; --muted:#8b92a3; --line:#262a34;
-          --persona:#e5484d; --veicolo:#3e8cf4; --animale:#30a46c; --none:#555c6b; --accent:#7c8cff; }
-  @media (prefers-color-scheme: light) {
-    :root { --bg:#f4f5f8; --card:#fff; --text:#1a1d24; --muted:#697085; --line:#e1e4ec; }
+  :root {
+    color-scheme: light;
+    --bg: #eef3f7; --surface: #fff; --surface-2: #f5f8fb; --ink: #16222b; --muted: #6d7f8b; --line: #e1e9ef;
+    --accent: #2f6fe4; --accent-soft: #e6eefc; --good: #2fa874; --good-soft: #e3f5ec; --warn: #e8913c; --warn-soft: #fff0e0; --bad: #d9534f; --bad-soft: #fde8e7;
+    --persona: #d9534f; --veicolo: #2f6fe4; --animale: #2fa874;
+    --sky-top: #cfe3f5; --sky-bot: #eef3f7; --shadow: 0 10px 30px rgba(30, 60, 90, .08); --radius: 20px;
   }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.4 system-ui,sans-serif; }
-  header { position:sticky; top:0; z-index:5; background:var(--bg); border-bottom:1px solid var(--line);
-           padding:12px 16px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
-  h1 { font-size:18px; margin:0 8px 0 0; }
-  .chips { display:flex; flex-wrap:wrap; gap:6px; }
-  button.chip, select { background:var(--card); color:var(--text); border:1px solid var(--line);
-           border-radius:999px; padding:6px 12px; font:inherit; cursor:pointer; }
-  button.chip.active { background:var(--accent); border-color:var(--accent); color:#fff; }
-  select { border-radius:8px; }
-  #stat { color:var(--muted); margin-left:auto; font-size:13px; }
-  main { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; padding:16px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
-  video, .thumb { width:100%; display:block; background:#000; aspect-ratio:16/9; }
-  .thumb { object-fit:cover; }
-  .gone { color:var(--muted); font-size:12px; }
-  .meta { padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
-  .row { display:flex; justify-content:space-between; gap:8px; font-size:13px; color:var(--muted); }
-  .cam { color:var(--text); font-weight:600; }
-  .badges { display:flex; flex-wrap:wrap; gap:6px; }
-  .badge { font-size:12px; font-weight:600; color:#fff; border-radius:6px; padding:2px 8px; }
-  .badge.persona { background:var(--persona); } .badge.veicolo { background:var(--veicolo); }
-  .badge.animale { background:var(--animale); } .badge.none { background:var(--none); }
-  .badge.id-known { background:transparent; color:var(--text); border:1px solid var(--accent); }
-  .badge.id-generic { background:transparent; color:var(--muted); border:1px solid var(--line); }
-  .badge.id-unknown { background:var(--persona); }
-  .badge.id-uncertain { background:transparent; color:var(--muted); border:1px dashed var(--muted); }
-  .badge.error, .badge.downloaded { background:#b7791f; }
-  #more { display:block; margin:0 auto 32px; }
-  #empty { text-align:center; color:var(--muted); padding:48px 16px; }
-  @media (max-width:520px) { header { padding:10px 12px; } main { padding:12px; grid-template-columns:1fr; } }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0d1318; --surface: #161e25; --surface-2: #1c262f; --ink: #e8eef2; --muted: #8b9ba6; --line: #26323c;
+      --accent: #5b9bff; --accent-soft: #1b2b45; --good: #43d196; --good-soft: #14302a; --warn: #f3a65a; --warn-soft: #3a2a17; --bad: #ef7773; --bad-soft: #3a1d1d;
+      --persona: #ef7773; --veicolo: #5b9bff; --animale: #43d196;
+      --sky-top: #0a1626; --sky-bot: #0d1318; --shadow: 0 10px 30px rgba(0, 0, 0, .35);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0d1318; --surface: #161e25; --surface-2: #1c262f; --ink: #e8eef2; --muted: #8b9ba6; --line: #26323c;
+    --accent: #5b9bff; --accent-soft: #1b2b45; --good: #43d196; --good-soft: #14302a; --warn: #f3a65a; --warn-soft: #3a2a17; --bad: #ef7773; --bad-soft: #3a1d1d;
+    --persona: #ef7773; --veicolo: #5b9bff; --animale: #43d196;
+    --sky-top: #0a1626; --sky-bot: #0d1318; --shadow: 0 10px 30px rgba(0, 0, 0, .35);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; min-width: 320px; color: var(--ink); background: var(--bg); padding-bottom: calc(86px + env(safe-area-inset-bottom));
+    font: 15px/1.45 system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  button, select { font: inherit; color: inherit; }
+  button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  h1, h2, h3, p { margin: 0; }
+  .shell { width: min(100% - 28px, 1120px); margin: 0 auto; }
+  [hidden] { display: none !important; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 18px 0 8px; }
+  .eyebrow { font-size: 12px; color: var(--muted); }
+  .topbar h1 { font-size: 26px; font-weight: 700; letter-spacing: -.01em; }
+  .toolbar { display: flex; align-items: center; gap: 8px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--surface) 80%, transparent); font-size: 13px; text-decoration: none; color: var(--ink); }
+  .pill svg { width: 17px; height: 17px; }
+  .icon-btn { width: 38px; padding: 0; justify-content: center; }
+
+  .hero { margin: 0 -14px; padding: 4px 14px 18px; background: linear-gradient(180deg, var(--sky-top), var(--sky-bot)); border-radius: 0 0 32px 32px; }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+  .stat { background: color-mix(in srgb, var(--surface) 88%, transparent); border: 1px solid var(--line); border-radius: 18px; padding: 10px 12px; }
+  .stat span { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .stat i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .stat b { display: block; font-size: clamp(22px, 6vw, 30px); letter-spacing: -.02em; line-height: 1.15; margin-top: 2px; }
+  .week { display: flex; align-items: end; gap: 6px; height: 54px; margin-top: 12px; }
+  .week div { flex: 1; display: flex; flex-direction: column; justify-content: end; align-items: center; height: 100%; font-size: 10px; color: var(--muted); gap: 3px; }
+  .week i { width: 100%; border-radius: 5px 5px 2px 2px; background: color-mix(in srgb, var(--accent) 45%, transparent); min-height: 3px; }
+  .week div.today i { background: var(--accent); }
+
+  h2.sec { font-size: 17px; font-weight: 700; margin: 20px 0 8px; }
+  .seen { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: none; }
+  .seen::-webkit-scrollbar { display: none; }
+  .who { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); text-align: left; }
+  .who[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; color: #fff; flex: none; }
+  .who b { display: block; font-size: 14px; line-height: 1.2; } .who small { color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+  .camalert { display: flex; align-items: center; gap: 10px; margin-top: 16px; padding: 11px 14px; border-radius: 16px; background: var(--bad-soft); color: var(--bad); text-decoration: none; font-size: 14px; font-weight: 600; }
+  .camalert span { color: var(--ink); font-weight: 400; opacity: .8; font-size: 13px; }
+  .pets { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .pet { display: block; text-align: left; padding: 12px; border-radius: 20px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); }
+  .pet[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .pet.away { opacity: .7; }
+  .pet .top { display: flex; align-items: center; gap: 10px; }
+  .pet .pic { width: 54px; height: 54px; border-radius: 50%; background: var(--surface-2); flex: none; display: grid; place-items: center; font-weight: 700; font-size: 20px; color: #fff; position: relative; }
+  .pet .pic img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }  /* crops are tall: fill the circle, cropped */
+  .pet .pic i { position: absolute; right: -1px; bottom: -1px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--surface); background: var(--muted); }
+  .pet .pic i.now { background: var(--good); } .pet .pic i.today { background: var(--warn); }
+  .pet b { display: block; font-size: 16px; line-height: 1.2; } .pet small { color: var(--muted); font-size: 12px; display: block; }
+  .pet .where { margin-top: 8px; font-size: 12px; color: var(--muted); min-height: 32px; }
+  .pet .where b { display: inline; font-size: 12px; color: var(--ink); }
+  .pet .mini { display: flex; align-items: end; gap: 3px; height: 22px; margin-top: 6px; }
+  .pet .mini i { flex: 1; border-radius: 2px; background: color-mix(in srgb, var(--animale) 50%, transparent); min-height: 2px; }
+  .pet .mini i:last-child { background: var(--animale); }
+  .filters { position: sticky; top: 0; z-index: 6; margin: 8px -14px 0; padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+  .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: none; min-height: 34px; padding: 0 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 13px; color: var(--muted); }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  select.chip { padding-right: 8px; max-width: 170px; }
+  .total { margin-left: auto; font-size: 12px; color: var(--muted); }
+
+  .day { display: flex; align-items: baseline; justify-content: space-between; margin: 22px 2px 10px; }
+  .day h3 { font-size: 16px; font-weight: 700; text-transform: capitalize; } .day span { font-size: 12px; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); padding: 0; text-align: left; display: block; width: 100%; }
+  .card:hover { border-color: var(--accent); }
+  .media { position: relative; aspect-ratio: 16 / 9; background: #0b0f13; }
+  .media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .media .time { position: absolute; left: 8px; bottom: 8px; background: rgba(0, 0, 0, .62); color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 8px; }
+  .media .play { position: absolute; right: 8px; bottom: 8px; width: 30px; height: 30px; border-radius: 50%; background: rgba(0, 0, 0, .62); display: grid; place-items: center; }
+  .media .play svg { width: 14px; height: 14px; fill: #fff; }
+  .media .gone { position: absolute; inset: 0; display: grid; place-items: center; color: #8a97a0; font-size: 12px; }
+  .bar { position: absolute; left: 0; right: 0; top: 0; height: 4px; display: flex; }
+  .bar i { flex: 1; } .bar .persona { background: var(--persona); } .bar .veicolo { background: var(--veicolo); } .bar .animale { background: var(--animale); }
+  .meta { padding: 10px 12px 12px; }
+  .meta .row { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
+  .meta .cam { color: var(--ink); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; min-height: 24px; }
+  .badge { font-size: 12px; font-weight: 600; border-radius: 999px; padding: 2px 9px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+  .badge.persona { background: var(--bad-soft); color: var(--persona); border-color: transparent; }
+  .badge.veicolo { background: var(--accent-soft); color: var(--veicolo); border-color: transparent; }
+  .badge.animale { background: var(--good-soft); color: var(--animale); border-color: transparent; }
+  .badge.id-known { background: transparent; color: var(--ink); border-color: var(--accent); }
+  .badge.id-unknown { background: var(--bad); color: #fff; border-color: transparent; }
+  .badge.id-uncertain { background: transparent; border-style: dashed; }
+  .badge.error, .badge.downloaded { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+
+  .skeleton { height: 220px; border-radius: var(--radius); background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%); background-size: 200% 100%; animation: sh 1.4s infinite; border: 1px solid var(--line); }
+  @keyframes sh { to { background-position: -200% 0; } }
+  .empty { text-align: center; color: var(--muted); padding: 48px 16px; }
+  .more { display: block; margin: 22px auto 0; min-height: 42px; padding: 0 22px; }
+  .newpill { position: fixed; left: 50%; transform: translateX(-50%); top: 14px; z-index: 20; background: var(--accent); color: #fff; border: 0; border-radius: 999px; padding: 9px 18px; font-weight: 600; box-shadow: var(--shadow); }
+  .err { margin: 12px 0; padding: 12px 14px; border-radius: 14px; background: var(--warn-soft); color: var(--warn); font-size: 14px; }
+
+  /* viewer */
+  .viewer { position: fixed; inset: 0; z-index: 30; background: rgba(5, 9, 12, .86); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .vbox { width: min(100%, 880px); max-height: 100%; overflow: auto; background: var(--surface); border-radius: 24px; border: 1px solid var(--line); }
+  .vmedia { background: #000; aspect-ratio: 16 / 9; }
+  .vmedia video, .vmedia img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .vinfo { padding: 14px 16px 16px; }
+  .vinfo h3 { font-size: 18px; } .vinfo .when { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .vdet { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .vdet b { color: var(--ink); }
+  .vnav { display: flex; justify-content: space-between; gap: 8px; margin-top: 14px; }
+  .vnav .chip { min-height: 40px; padding: 0 18px; }
+
+  .bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; justify-content: space-around; padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(14px); border-top: 1px solid var(--line); }
+  .nav { flex: 1; max-width: 130px; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--muted); font-size: 11px; padding: 4px; text-decoration: none; }
+  .nav svg { width: 25px; height: 25px; } .nav.active { color: var(--accent); }
+  @media (max-width: 560px) { .stats { gap: 6px; } .stat { padding: 9px 10px; } .grid { grid-template-columns: 1fr; } .viewer { padding: 0; align-items: flex-end; } .vbox { border-radius: 24px 24px 0 0; } }
+  @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } html { scroll-behavior: auto; } }
 </style>
 </head>
 <body>
-<header>
-  <h1>Blinkwatch</h1>
-  <div class="chips" id="cats"></div>
-  <select id="cam"><option value="">Tutte le telecamere</option></select>
-  <a href="/label" style="color:var(--accent);text-decoration:none">Etichetta animali</a>
-  <span id="stat"></span>
-</header>
-<main id="grid"></main>
-<div id="empty" hidden>Nessun evento con questi filtri.</div>
-<button class="chip" id="more" hidden>Carica altri</button>
+<div class="shell">
+  <header class="topbar">
+    <div><p class="eyebrow" id="today-label">Telecamere di casa</p><h1>Blinkwatch</h1></div>
+    <div class="toolbar">
+      <button class="pill icon-btn" id="theme" type="button" aria-label="Cambia tema"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="theme-icon"></svg></button>
+    </div>
+  </header>
+  <div class="hero">
+    <div class="stats" id="stats" aria-label="Eventi di oggi">
+      <div class="stat"><span>Oggi</span><b id="s-total">—</b></div>
+      <div class="stat"><span><i style="background:var(--persona)"></i>Persone</span><b id="s-person">—</b></div>
+      <div class="stat"><span><i style="background:var(--animale)"></i>Animali</span><b id="s-animal">—</b></div>
+      <div class="stat"><span><i style="background:var(--veicolo)"></i>Veicoli</span><b id="s-vehicle">—</b></div>
+    </div>
+    <div class="week" id="week" aria-label="Eventi degli ultimi 7 giorni"></div>
+  </div>
+
+  <a class="camalert" id="cam-alert" href="/cameras" hidden></a>
+  <h2 class="sec">Animali</h2>
+  <div class="pets" id="pets" aria-live="polite"></div>
+  <h2 class="sec">Persone</h2>
+  <div class="seen" id="seen"></div>
+
+  <div class="filters" id="filters">
+    <div class="chips" id="cats" role="group" aria-label="Categoria"></div>
+    <select class="chip" id="cam" aria-label="Telecamera"><option value="">Tutte le telecamere</option></select>
+    <button class="chip" id="who-chip" type="button" aria-pressed="true" hidden></button>
+    <span class="total" id="total"></span>
+  </div>
+  <div id="error" class="err" hidden role="alert"></div>
+  <main id="feed"></main>
+  <div class="empty" id="empty" hidden>Nessun evento con questi filtri.</div>
+  <button class="chip more" id="more" type="button" hidden>Carica altri</button>
+</div>
+<button class="newpill" id="newpill" type="button" hidden></button>
+
+<div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="Dettaglio evento">
+  <div class="vbox" id="vbox"></div>
+</div>
+
+<nav class="bottom-nav" aria-label="Navigazione principale">
+  <a class="nav active" href="/" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18M8 4v5"/></svg><span>Eventi</span></a>
+  <a class="nav" href="/cameras"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Telecamere</span></a>
+  <a class="nav" href="/label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12 12 20 4 12V4h8z"/><circle cx="8.5" cy="8.5" r="1.3"/></svg><span>Etichetta</span></a>
+  <a class="nav" href="/power"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></svg><span>Consumi</span></a>
+</nav>
+
 <script>
-const CATS = [["", "Tutti"], ["persona", "Persone"], ["veicolo", "Veicoli"], ["animale", "Animali"], ["nessuna", "Nessuno"]];
-let category = "", camera = "", before = "", loading = false;
+'use strict';
 const $ = id => document.getElementById(id);
+const CATS = [['', 'Tutti'], ['persona', 'Persone'], ['animale', 'Animali'], ['veicolo', 'Veicoli'], ['nessuna', 'Nessuno']];
+const CAT_LABEL = { persona: 'persona', animale: 'animale', veicolo: 'veicolo' };
+const PAGE = 30;
+const URLQ = new URLSearchParams(location.search);
+const S = { items: [], category: '', camera: URLQ.get('camera') || '', who: URLQ.get('who') || '', loading: false, done: false, pending: [], summary: null, open: -1 };
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (_) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
+};
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const api = async path => { const r = await fetch(path, { cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); };
+const hue = name => { let h = 0; for (const ch of name) h = (h * 31 + ch.codePointAt(0)) % 360; return h; };
 
+/* ---------- theme (same key as /power) ---------- */
+const THEMES = ['auto', 'light', 'dark'];
+const THEME_ICON = {
+  auto: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>',
+  light: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
+  dark: '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/>',
+};
+function applyTheme(t) {
+  if (!THEMES.includes(t)) t = 'auto';
+  const root = document.documentElement;
+  if (t === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', t);
+  $('theme-icon').innerHTML = THEME_ICON[t];
+  const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.querySelector('meta[name=theme-color]').content = dark ? '#0a1626' : '#cfe3f5';
+}
+$('theme').onclick = () => { const n = THEMES[(THEMES.indexOf(store.get('theme', 'auto')) + 1) % 3]; store.set('theme', n); applyTheme(n); };
+applyTheme(store.get('theme', 'auto'));
+
+/* ---------- time ---------- */
+const day0 = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+function dayLabel(iso) {
+  const d = day0(iso), t = day0(new Date()), diff = Math.round((t - d) / 86400000);
+  if (diff === 0) return 'Oggi'; if (diff === 1) return 'Ieri';
+  return d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+const hhmm = iso => new Date(iso).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+function ago(iso) {
+  const s = (Date.now() - new Date(iso)) / 1000;
+  return s < 90 ? 'adesso' : s < 5400 ? `${Math.round(s / 60)} min fa` : s < 129600 ? `${Math.round(s / 3600)} h fa` : `${Math.round(s / 86400)} giorni fa`;
+}
+
+/* ---------- summary ---------- */
+async function loadSummary() {
+  const start = day0(new Date()); start.setDate(start.getDate() - 6);
+  try {
+    const r = await api('/api/summary?days=7&since=' + encodeURIComponent(start.toISOString()));
+    S.summary = r;
+    const t = r.days[6];
+    $('s-total').textContent = t.total; $('s-person').textContent = t.person; $('s-animal').textContent = t.animal; $('s-vehicle').textContent = t.vehicle;
+    const max = Math.max(1, ...r.days.map(d => d.total));
+    $('week').innerHTML = r.days.map((d, i) => {
+      const date = new Date(start); date.setDate(date.getDate() + i);
+      return `<div class="${i === 6 ? 'today' : ''}" title="${d.total} eventi"><i style="height:${Math.max(3, d.total / max * 34)}px"></i>${date.toLocaleDateString('it-IT', { weekday: 'narrow' })}</div>`;
+    }).join('');
+    const people = r.seen.filter(w => w.kind !== 'animale');
+    $('seen').innerHTML = people.length ? people.map(w =>
+      `<button class="who" type="button" data-who="${esc(w.name)}" aria-pressed="${S.who === w.name}"><span class="avatar" style="background:hsl(${hue(w.name)} 55% 48%)">${esc(w.name[0].toUpperCase())}</span>
+        <span><b>${esc(w.name)}</b><small>${ago(w.at)} · ${esc(w.camera)}</small></span></button>`).join('') : '<p class="eyebrow">Nessuno riconosciuto negli ultimi 7 giorni.</p>';
+  } catch (e) { $('seen').innerHTML = ''; }
+}
+document.addEventListener('click', e => { const b = e.target.closest('.who, .pet'); if (b) setWho(S.who === b.dataset.who ? '' : b.dataset.who); });
+
+async function loadPets() {
+  try {
+    const r = await api('/api/animals?tz=' + (-new Date().getTimezoneOffset()));
+    const dow = i => { const d = new Date(); d.setDate(d.getDate() - 6 + i); return d.toLocaleDateString('it-IT', { weekday: 'short' }); };
+    $('pets').innerHTML = r.animals.map(a => {
+      const secs = a.last_at ? (Date.now() - new Date(a.last_at)) / 1000 : null;
+      const away = secs === null || secs > 86400;
+      const dot = secs !== null && secs < 3600 ? 'now' : secs !== null && secs < 86400 ? 'today' : '';
+      const max = Math.max(1, ...a.days);
+      const top = Object.entries(a.where).sort((x, y) => y[1] - x[1])[0];
+      const pic = a.crop_id ? `<img alt="" src="/crop/${a.crop_id}" loading="lazy">` : esc(a.name[0].toUpperCase());
+      return `<button class="pet ${away ? 'away' : ''}" type="button" data-who="${esc(a.name)}" aria-pressed="${S.who === a.name}">
+        <span class="top"><span class="pic" style="${a.crop_id ? '' : `background:hsl(${hue(a.name)} 55% 48%)`}">${pic}<i class="${dot}"></i></span>
+        <span><b>${esc(a.name)}</b><small>${secs === null ? 'mai visto' : (secs < 90 ? 'adesso' : ago(a.last_at))}</small></span></span>
+        <span class="where">${a.last_at ? `${esc(a.camera.replace(/^Telecamera\s+/i, ''))}<br><b>${a.today}</b> oggi · <b>${a.week}</b> in 7 gg` : 'Nessun avvistamento'}</span>
+        <span class="mini" title="Avvistamenti degli ultimi 7 giorni">${a.days.map((n, i) => `<i title="${dow(i)}: ${n}" style="height:${Math.max(2, n / max * 22)}px"></i>`).join('')}</span></button>`;
+    }).join('');
+  } catch (_) { $('pets').innerHTML = ''; }
+}
+async function loadCameraAlert() {
+  try {
+    const r = await api('/api/cameras?tz=' + (-new Date().getTimezoneOffset()));
+    const bad = r.cameras.filter(c => c.state === 'stalled');
+    const el = $('cam-alert');
+    el.hidden = !bad.length;
+    el.innerHTML = bad.length ? `<span style="font-size:18px">!</span><div>${bad.map(c => esc(c.camera.replace(/^Telecamera\s+/i, ''))).join(', ')} ${bad.length > 1 ? 'non registrano' : 'non registra'} da ${bad.map(c => c.age_s < 172800 ? Math.round(c.age_s / 3600) + ' h' : Math.round(c.age_s / 86400) + ' giorni').join(' / ')}<br><span>Tocca per lo stato delle telecamere</span></div>` : '';
+  } catch (_) {}
+}
+function setWho(name) {
+  S.who = name;
+  $('who-chip').hidden = !name; $('who-chip').textContent = name ? `${name} ✕` : '';
+  document.querySelectorAll('.who, .pet').forEach(b => b.setAttribute('aria-pressed', b.dataset.who === name));
+  reset();
+}
+$('who-chip').onclick = () => setWho('');
+
+/* ---------- filters ---------- */
 CATS.forEach(([val, label]) => {
-  const b = document.createElement("button");
-  b.className = "chip" + (val === category ? " active" : ""); b.textContent = label;
-  b.onclick = () => { category = val; document.querySelectorAll("#cats .chip").forEach(c => c.classList.toggle("active", c === b)); reset(); };
-  $("cats").appendChild(b);
+  const b = document.createElement('button');
+  b.className = 'chip'; b.type = 'button'; b.textContent = label; b.dataset.cat = val; b.setAttribute('aria-pressed', val === S.category);
+  b.onclick = () => { S.category = val; document.querySelectorAll('#cats .chip').forEach(c => c.setAttribute('aria-pressed', c === b)); reset(); };
+  $('cats').appendChild(b);
 });
-$("cam").onchange = e => { camera = e.target.value; reset(); };
-$("more").onclick = () => load();
+$('cam').onchange = e => { S.camera = e.target.value; reset(); };
+$('more').onclick = () => load();
 
-function reset() { $("grid").innerHTML = ""; before = ""; load(); }
-
-function fmt(iso) {
-  return new Date(iso).toLocaleString("it-IT", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit", second:"2-digit" });
-}
-
-function card(e) {
-  const el = document.createElement("div"); el.className = "card";
-  const badges = e.categories.length
-    ? e.categories.map(c => `<span class="badge ${c}">${c}</span>`).join("")
-    : `<span class="badge ${e.status === "classified" ? "none" : e.status}">${e.status === "classified" ? "nessuno" : e.status}</span>`;
+/* ---------- feed ---------- */
+function badgesOf(e) {
+  const cats = e.categories.length ? e.categories.map(c => `<span class="badge ${c}">${CAT_LABEL[c] || c}</span>`).join('')
+    : `<span class="badge ${e.status === 'classified' ? '' : e.status}">${e.status === 'classified' ? 'nessuno' : esc(e.status)}</span>`;
   const who = (e.identities || []).map(i => {
-    const pct = i.state === "known" ? ` ${Math.round(i.conf * 100)}%` : "";
-    const icon = i.kind === "animale" ? "🐾" : "👤";
-    return `<span class="badge id-${i.state}">${icon} ${i.state === "uncertain" ? i.name + " ?" : i.name}${pct}</span>`;
-  }).join("");
-  const det = Object.entries(e.details).map(([k, v]) => `${k} ${Math.round(v * 100)}%`).join(" · ");
-  const id = encodeURIComponent(e.id);
-  const media = e.has_video
-    ? `<video controls preload="none" poster="/thumb/${id}" src="/video/${id}"></video>`
-    : `<img class="thumb" loading="lazy" alt="" src="/thumb/${id}" onerror="this.style.visibility='hidden'">`;
-  el.innerHTML = `${media}
-    <div class="meta"><div class="row"><span class="cam"></span><span>${fmt(e.created_at)}</span></div>
-    <div class="badges">${badges}${who}</div><div class="row"><span>${det}</span>${e.has_video ? "" : '<span class="gone">video eliminato</span>'}</div></div>`;
-  el.querySelector(".cam").textContent = e.camera;
-  return el;
+    const pct = i.state === 'known' ? ` ${Math.round(i.conf * 100)}%` : '';
+    const icon = i.kind === 'animale' ? '🐾' : '👤';
+    return `<span class="badge id-${esc(i.state)}">${icon} ${esc(i.state === 'uncertain' ? i.name + ' ?' : i.name)}${pct}</span>`;
+  }).join('');
+  return cats + who;
 }
+function cardHtml(e, idx) {
+  const id = encodeURIComponent(e.id);
+  const bars = e.categories.map(c => `<i class="${c}"></i>`).join('');
+  return `<button class="card" type="button" data-i="${idx}" aria-label="Apri evento di ${esc(e.camera)} alle ${hhmm(e.created_at)}">
+    <div class="media"><div class="bar">${bars}</div><img loading="lazy" alt="" src="/thumb/${id}" onerror="this.style.display='none'">
+      <span class="time">${hhmm(e.created_at)}</span>${e.has_video ? '<span class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>' : ''}</div>
+    <div class="meta"><div class="row"><span class="cam">${esc(e.camera)}</span><span>${ago(e.created_at)}</span></div><div class="badges">${badgesOf(e)}</div></div></button>`;
+}
+function render() {
+  const out = []; let last = '';
+  const groups = [];
+  S.items.forEach((e, i) => {
+    const label = dayLabel(e.created_at);
+    if (label !== last) { groups.push({ label, items: [] }); last = label; }
+    groups[groups.length - 1].items.push(cardHtml(e, i));
+  });
+  $('feed').innerHTML = groups.map(g => `<div class="day"><h3>${esc(g.label)}</h3><span>${g.items.length}${S.done ? '' : '+'} eventi</span></div><div class="grid">${g.items.join('')}</div>`).join('');
+  $('empty').hidden = S.items.length > 0 || S.loading;
+  $('more').hidden = S.done || !S.items.length;
+}
+$('feed').addEventListener('click', e => { const c = e.target.closest('[data-i]'); if (c) openViewer(Number(c.dataset.i)); });
+const query = extra => new URLSearchParams({ category: S.category, camera: S.camera, who: S.who, limit: PAGE, ...extra });
 
 async function load() {
-  if (loading) return; loading = true;
-  const q = new URLSearchParams({ category, camera, before, limit: 30 });
-  const data = await (await fetch("/api/events?" + q)).json();
-  if (!$("cam").dataset.filled || $("cam").options.length - 1 !== data.cameras.length) {
-    const cur = $("cam").value;
-    $("cam").innerHTML = '<option value="">Tutte le telecamere</option>' +
-      data.cameras.map(c => `<option value="${c.replace(/"/g, "&quot;")}">${c.trim()}</option>`).join("");
-    $("cam").value = cur; $("cam").dataset.filled = 1;
-  }
-  data.events.forEach(e => $("grid").appendChild(card(e)));
-  if (data.events.length) before = data.events[data.events.length - 1].created_at;
-  $("more").hidden = data.events.length < 30;
-  $("empty").hidden = $("grid").children.length > 0;
-  $("stat").textContent = data.total_classified + " clip classificate";
-  loading = false;
+  if (S.loading) return;
+  S.loading = true; $('more').disabled = true;
+  try {
+    const before = S.items.length ? S.items[S.items.length - 1].created_at : '';
+    const data = await api('/api/events?' + query({ before }));
+    fillCameras(data.cameras);
+    S.items.push(...data.events);
+    S.done = data.events.length < PAGE;
+    $('total').textContent = `${data.total_classified} clip classificate`;
+    $('error').hidden = true;
+  } catch (e) { $('error').textContent = `Non riesco a caricare gli eventi (${e.message}).`; $('error').hidden = false; }
+  S.loading = false; $('more').disabled = false; render();
 }
-reset();
-setInterval(() => { if (!before || $("grid").children.length <= 30) { /* auto-refresh only when at top */ if (scrollY < 50) reset(); } }, 60000);
+function fillCameras(cams) {
+  const sel = $('cam');
+  if (sel.options.length - 1 === cams.length) return;
+  sel.innerHTML = '<option value="">Tutte le telecamere</option>' + cams.map(c => `<option value="${esc(c)}">${esc(c.trim())}</option>`).join('');
+  sel.value = S.camera;
+}
+function reset() {
+  S.items = []; S.done = false; S.pending = []; $('newpill').hidden = true;
+  $('feed').innerHTML = Array.from({ length: 6 }, () => '<div class="skeleton" style="margin-top:12px"></div>').join('');
+  $('empty').hidden = true; $('more').hidden = true;
+  S.loading = false; load();
+}
+
+/* new events: shown at once if you are at the top, otherwise behind a pill */
+async function poll() {
+  if (!S.items.length || S.loading) return;
+  try {
+    const data = await api('/api/events?' + query({ after: S.pending.length ? S.pending[0].created_at : S.items[0].created_at, limit: 60 }));
+    if (data.events.length) {
+      S.pending = data.events.filter(e => !S.items.some(i => i.id === e.id) && !S.pending.some(i => i.id === e.id)).concat(S.pending);
+      if (scrollY < 120 && S.open < 0) flushPending(); else showPill();
+    }
+  } catch (_) {}
+  loadSummary(); loadPets();
+}
+function flushPending() { S.items = S.pending.concat(S.items); S.pending = []; $('newpill').hidden = true; render(); }
+function showPill() { if (!S.pending.length) return; $('newpill').textContent = `↑ ${S.pending.length} nuovi eventi`; $('newpill').hidden = false; }
+$('newpill').onclick = () => { flushPending(); scrollTo({ top: 0, behavior: 'smooth' }); };
+addEventListener('scroll', () => { if (scrollY < 40 && S.pending.length && S.open < 0) flushPending(); }, { passive: true });
+
+/* ---------- viewer ---------- */
+function openViewer(i) {
+  const e = S.items[i]; if (!e) return;
+  S.open = i;
+  const id = encodeURIComponent(e.id);
+  const media = e.has_video ? `<video controls autoplay playsinline poster="/thumb/${id}" src="/video/${id}"></video>` : `<img alt="" src="/thumb/${id}">`;
+  const det = Object.entries(e.details || {}).map(([k, v]) => `<span>${esc(k)} <b>${Math.round(v * 100)}%</b></span>`).join('');
+  $('vbox').innerHTML = `<div class="vmedia">${media}</div><div class="vinfo">
+    <h3>${esc(e.camera)}</h3><p class="when">${new Date(e.created_at).toLocaleString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', second: '2-digit' })} · ${ago(e.created_at)}</p>
+    <div class="badges">${badgesOf(e)}</div>${det ? `<div class="vdet">${det}</div>` : ''}
+    ${e.has_video ? '' : '<p class="eyebrow" style="margin-top:8px">Il video è stato eliminato dopo 1 ora; restano miniatura e ritagli.</p>'}
+    <div class="vnav"><button class="chip" type="button" id="v-prev" ${i >= S.items.length - 1 ? 'disabled' : ''}>← Più vecchio</button><button class="chip" type="button" id="v-close">Chiudi</button><button class="chip" type="button" id="v-next" ${i === 0 ? 'disabled' : ''}>Più recente →</button></div></div>`;
+  $('viewer').hidden = false; document.body.style.overflow = 'hidden';
+  $('v-close').onclick = closeViewer; $('v-prev').onclick = () => step(1); $('v-next').onclick = () => step(-1);
+  $('v-close').focus();
+}
+function step(d) {
+  const n = S.open + d;
+  if (n < 0) return;
+  if (n >= S.items.length) { if (!S.done) load().then(() => openViewer(n)); return; }
+  openViewer(n);
+}
+function closeViewer() { $('viewer').hidden = true; $('vbox').innerHTML = ''; document.body.style.overflow = ''; S.open = -1; if (S.pending.length) showPill(); }
+$('viewer').addEventListener('click', e => { if (e.target === $('viewer')) closeViewer(); });
+addEventListener('keydown', e => {
+  if ($('viewer').hidden) return;
+  if (e.key === 'Escape') closeViewer(); else if (e.key === 'ArrowLeft') step(1); else if (e.key === 'ArrowRight') step(-1);
+});
+
+$('today-label').textContent = new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+if (S.who) { $('who-chip').hidden = false; $('who-chip').textContent = `${S.who} ✕`; }
+reset(); loadSummary(); loadPets(); loadCameraAlert();
+setInterval(poll, 30000);
+setInterval(() => { loadPets(); loadCameraAlert(); }, 120000);
 </script>
 </body>
 </html>

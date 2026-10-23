@@ -3,6 +3,7 @@
 Run:  .venv/bin/uvicorn blinkwatch.web:app --host 0.0.0.0 --port 8765
 """
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import numpy as np
@@ -23,16 +24,22 @@ def index():
 
 
 @app.get("/api/events")
-def events(category: str = "", camera: str = "", status: str = "", limit: int = 60, before: str = ""):
+def events(category: str = "", camera: str = "", status: str = "", limit: int = 60, before: str = "", who: str = "", after: str = ""):
     sql, args = "SELECT * FROM clips WHERE 1=1", []
+    if who:  # only clips where this person/cat was identified (state known or uncertain guess)
+        sql += " AND identities LIKE ?"
+        args.append('%' + json.dumps({"name": who}, ensure_ascii=False)[1:-1] + '%')
+    if after:
+        sql += " AND created_at > ?"
+        args.append(after)
     if category == "nessuna":
         sql += " AND status='classified' AND categories=''"
     elif category:
         sql += " AND (',' || categories || ',') LIKE ?"
         args.append(f"%,{category},%")
     if camera:
-        sql += " AND camera=?"
-        args.append(camera)
+        sql += " AND TRIM(camera)=?"  # Blink pads some names with a trailing space
+        args.append(camera.strip())
     if status:
         sql += " AND status=?"
         args.append(status)
@@ -44,7 +51,7 @@ def events(category: str = "", camera: str = "", status: str = "", limit: int = 
     db = store.connect()
     try:
         rows = db.execute(sql, args).fetchall()
-        cameras = [r[0] for r in db.execute("SELECT DISTINCT camera FROM clips ORDER BY camera")]
+        cameras = [r[0] for r in db.execute("SELECT DISTINCT TRIM(camera) AS c FROM clips ORDER BY c")]
         counts = {r[0] or "nessuna": r[1] for r in db.execute(
             "SELECT categories, COUNT(*) FROM clips WHERE status='classified' GROUP BY categories")}
     finally:
@@ -59,6 +66,160 @@ def events(category: str = "", camera: str = "", status: str = "", limit: int = 
             for r in rows
         ],
     }
+
+
+@app.get("/api/summary")
+def summary(since: str, days: int = 7):
+    """Counts for the home page: clips per category from `since` (local midnight of the oldest day, ISO) in daily buckets,
+    who was last seen (identified with state 'known') and when each camera last saw something."""
+    start = datetime.fromisoformat(since.replace("Z", "+00:00"))
+    db = store.connect()
+    try:
+        rows = db.execute("SELECT created_at, camera, categories, identities FROM clips WHERE created_at >= ? ORDER BY created_at DESC",
+                          (start.isoformat(),)).fetchall()
+    finally:
+        db.close()
+    per_day = [{"person": 0, "animal": 0, "vehicle": 0, "total": 0} for _ in range(max(1, min(days, 30)))]
+    seen, cams = {}, {}
+    for r in rows:
+        at = datetime.fromisoformat(r["created_at"])
+        i = int((at - start).total_seconds() // 86400)
+        cats = {c for c in r["categories"].split(",") if c}
+        if 0 <= i < len(per_day):
+            d = per_day[i]
+            d["total"] += 1
+            d["person"] += "persona" in cats
+            d["animal"] += "animale" in cats
+            d["vehicle"] += "veicolo" in cats
+        cam = r["camera"].strip()
+        c = cams.setdefault(cam, {"camera": cam, "last_at": r["created_at"], "count": 0})
+        c["count"] += 1
+        for ident in json.loads(r["identities"] or "[]"):
+            if ident.get("state") == "known" and ident["name"] not in seen:  # rows are newest first
+                seen[ident["name"]] = {"name": ident["name"], "kind": ident.get("kind"), "at": r["created_at"], "camera": cam, "conf": ident.get("conf")}
+    return {"days": per_day, "seen": sorted(seen.values(), key=lambda x: x["at"], reverse=True),
+            "cameras": sorted(cams.values(), key=lambda x: x["camera"]),
+            "names": {"persone": config.PERSON_NAMES, "animali": config.CAT_NAMES}}
+
+
+CAMERAS_PAGE = Path(__file__).with_name("cameras.html")
+STORAGE_LOG = config.DATA_DIR / "storage_status.jsonl"
+
+
+@app.get("/cameras", response_class=HTMLResponse)
+def cameras_page():
+    return HTMLResponse(CAMERAS_PAGE.read_text(), headers={"Cache-Control": "no-store"})
+
+
+def _local_midnight(now: datetime, tz_min: int) -> datetime:
+    """UTC instant of the last midnight in the client's timezone (tz_min = minutes east of UTC)."""
+    local = now + timedelta(minutes=tz_min)
+    return local.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(minutes=tz_min)
+
+
+def _camera_state(age_s: float, expected_s: float) -> str:
+    """ok / quiet / stalled from how long a camera has been silent compared with how often it normally records."""
+    if age_s <= max(4 * 3600, 10 * expected_s):
+        return "ok"
+    return "quiet" if age_s <= max(24 * 3600, 30 * expected_s) else "stalled"
+
+
+@app.get("/api/cameras")
+def cameras(tz: int = 0):
+    """Per camera: last clip, activity of the last 7 days (per day and per hour of the day), status, and what Blink reports
+    (battery, Wi-Fi) when the watcher has recorded it. Plus the USB-storage state of each sync module."""
+    now = datetime.now(timezone.utc)
+    start = _local_midnight(now, tz) - timedelta(days=6)
+    db = store.connect()
+    try:
+        rows = db.execute("SELECT id, camera, created_at, categories, identities FROM clips WHERE created_at >= ? ORDER BY created_at DESC",
+                          (start.isoformat(),)).fetchall()
+        last = {}
+        for r in db.execute("SELECT camera, MAX(created_at) AS at, COUNT(*) AS n FROM clips GROUP BY camera"):
+            last.setdefault(r["camera"].strip(), {"at": r["at"], "n": 0})
+            last[r["camera"].strip()]["at"] = max(last[r["camera"].strip()]["at"], r["at"])
+            last[r["camera"].strip()]["n"] += r["n"]
+        newest = {}
+        for r in db.execute("SELECT id, camera, MAX(created_at) AS at FROM clips GROUP BY camera"):
+            k = r["camera"].strip()
+            if k not in newest or r["at"] > newest[k][1]:
+                newest[k] = (r["id"], r["at"])
+        status = {r["camera"]: (json.loads(r["data"] or "{}"), r["updated_at"]) for r in db.execute("SELECT * FROM camera_status")}
+        processed = db.execute("SELECT MAX(processed_at) FROM clips").fetchone()[0]
+    finally:
+        db.close()
+    today_start = start + timedelta(days=6)
+    out = {k: {"camera": k, "total": v["n"], "last_at": v["at"], "last_id": newest[k][0], "today": 0, "week": 0,
+               "days": [0] * 7, "hours": [0] * 24, "cats": {"persona": 0, "animale": 0, "veicolo": 0}, "who": {}}
+           for k, v in last.items()}
+    for r in rows:
+        c = out[r["camera"].strip()]
+        at = datetime.fromisoformat(r["created_at"])
+        c["week"] += 1
+        c["days"][min(6, int((at - start).total_seconds() // 86400))] += 1
+        c["hours"][(at + timedelta(minutes=tz)).hour] += 1
+        c["today"] += at >= today_start
+        for cat in r["categories"].split(","):
+            if cat in c["cats"]:
+                c["cats"][cat] += 1
+        for ident in json.loads(r["identities"] or "[]"):
+            if ident.get("state") == "known":
+                c["who"][ident["name"]] = c["who"].get(ident["name"], 0) + 1
+    for k, c in out.items():
+        age = (now - datetime.fromisoformat(c["last_at"])).total_seconds()
+        expected = 7 * 86400 / c["week"] if c["week"] else 7 * 86400
+        c["age_s"] = int(age)
+        c["state"] = _camera_state(age, expected)
+        c["expected_gap_s"] = int(expected)
+        c["blink"], c["blink_at"] = status.get(k, (None, None))
+    modules = {}
+    if STORAGE_LOG.exists():
+        for line in STORAGE_LOG.read_text().splitlines():
+            try:
+                rec = json.loads(line)
+                modules[rec["module"]] = {"module": rec["module"], "status": rec["to"], "since": rec["time"], "cameras": rec["cameras"]}
+            except (ValueError, KeyError):
+                pass
+    return {"now": now.isoformat(), "cameras": sorted(out.values(), key=lambda c: c["camera"]), "modules": list(modules.values()),
+            "last_processed": processed}
+
+
+@app.get("/api/animals")
+def animals(tz: int = 0):
+    """Each pet: when and where it was last seen, sightings today and over 7 days, and a recent crop as its picture."""
+    now = datetime.now(timezone.utc)
+    start = _local_midnight(now, tz) - timedelta(days=6)
+    today_start = start + timedelta(days=6)
+    names = [n for n in config.CAT_NAMES if "sconosciut" not in n.lower()]
+    db = store.connect()
+    try:
+        rows = db.execute("SELECT id, camera, created_at, identities FROM clips WHERE created_at >= ? AND identities LIKE '%animale%' ORDER BY created_at DESC",
+                          (start.isoformat(),)).fetchall()
+        res = {n: {"name": n, "last_at": None, "camera": None, "clip_id": None, "today": 0, "week": 0, "days": [0] * 7, "where": {}} for n in names}
+        for r in rows:
+            at = datetime.fromisoformat(r["created_at"])
+            for ident in json.loads(r["identities"] or "[]"):
+                a = res.get(ident.get("name"))
+                if a is None or ident.get("state") != "known":
+                    continue
+                if a["last_at"] is None:
+                    a.update(last_at=r["created_at"], camera=r["camera"].strip(), clip_id=r["id"])
+                a["week"] += 1
+                a["today"] += at >= today_start
+                a["days"][min(6, int((at - start).total_seconds() // 86400))] += 1
+                a["where"][r["camera"].strip()] = a["where"].get(r["camera"].strip(), 0) + 1
+        for n, a in res.items():
+            crop = db.execute("SELECT id FROM crops WHERE kind='animale' AND (label=? OR (label IS NULL AND pred_label=? AND pred_conf>=0.6)) "
+                              "ORDER BY created_at DESC LIMIT 1", (n, n)).fetchone()
+            a["crop_id"] = crop["id"] if crop else None
+            if a["last_at"] is None:  # not seen this week: look further back for the last time
+                old = db.execute("SELECT id, camera, created_at FROM clips WHERE identities LIKE ? ORDER BY created_at DESC LIMIT 1",
+                                 ("%" + json.dumps({"name": n}, ensure_ascii=False)[1:-1] + "%",)).fetchone()
+                if old:
+                    a.update(last_at=old["created_at"], camera=old["camera"].strip(), clip_id=old["id"])
+    finally:
+        db.close()
+    return {"animals": list(res.values())}
 
 
 @app.get("/video/{clip_id}")

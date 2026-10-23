@@ -178,6 +178,23 @@ def log_storage_status(blink):
                                  priority=3 if ok else 5, tags=["white_check_mark" if ok else "warning"])
 
 
+CAMERA_FIELDS = ("battery", "battery_level", "battery_voltage", "wifi_strength", "sync_signal_strength", "temperature_c",
+                 "motion_enabled", "sync_module", "type", "version", "last_record")
+
+
+def record_camera_status(blink, db):
+    """Save what Blink reports about each camera (battery, Wi-Fi, temperature...) for the /cameras page.
+    Only a whitelist of fields: attributes also hold ids, serials and signed URLs."""
+    now = datetime.now(timezone.utc).isoformat()
+    for name, cam in blink.cameras.items():
+        attrs = cam.attributes
+        data = {k: attrs.get(k) for k in CAMERA_FIELDS if isinstance(attrs.get(k), (str, int, float, bool, type(None)))}
+        db.execute("INSERT INTO camera_status (camera, data, updated_at) VALUES (?,?,?) "
+                   "ON CONFLICT(camera) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at",
+                   (name.strip(), json.dumps(data), now))
+    db.commit()
+
+
 async def cleanup(db):
     delete_old_videos(db)  # sync on purpose: sqlite connections cannot be used from other threads
 
@@ -218,6 +235,10 @@ async def main():
                 log_storage_status(blink)
             except Exception:
                 log.exception("storage status logging failed")
+            try:
+                record_camera_status(blink, db)
+            except Exception:
+                log.exception("camera status recording failed")
             log.info("loop timing: " + " ".join(f"{k} {v:.1f}s" for k, v in times.items()))
             await asyncio.sleep(config.POLL_INTERVAL)
 

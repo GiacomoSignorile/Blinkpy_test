@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#dfeaf3">
+<title>Telecamere · Blinkwatch</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #eef3f7; --surface: #fff; --surface-2: #f5f8fb; --ink: #16222b; --muted: #6d7f8b; --line: #e1e9ef;
+    --accent: #2f6fe4; --accent-soft: #e6eefc; --good: #2fa874; --good-soft: #e3f5ec; --warn: #e8913c; --warn-soft: #fff0e0; --bad: #d9534f; --bad-soft: #fde8e7;
+    --persona: #d9534f; --veicolo: #2f6fe4; --animale: #2fa874;
+    --sky-top: #cfe3f5; --sky-bot: #eef3f7; --shadow: 0 10px 30px rgba(30, 60, 90, .08); --radius: 20px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0d1318; --surface: #161e25; --surface-2: #1c262f; --ink: #e8eef2; --muted: #8b9ba6; --line: #26323c;
+      --accent: #5b9bff; --accent-soft: #1b2b45; --good: #43d196; --good-soft: #14302a; --warn: #f3a65a; --warn-soft: #3a2a17; --bad: #ef7773; --bad-soft: #3a1d1d;
+      --persona: #ef7773; --veicolo: #5b9bff; --animale: #43d196;
+      --sky-top: #0a1626; --sky-bot: #0d1318; --shadow: 0 10px 30px rgba(0, 0, 0, .35);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0d1318; --surface: #161e25; --surface-2: #1c262f; --ink: #e8eef2; --muted: #8b9ba6; --line: #26323c;
+    --accent: #5b9bff; --accent-soft: #1b2b45; --good: #43d196; --good-soft: #14302a; --warn: #f3a65a; --warn-soft: #3a2a17; --bad: #ef7773; --bad-soft: #3a1d1d;
+    --persona: #ef7773; --veicolo: #5b9bff; --animale: #43d196;
+    --sky-top: #0a1626; --sky-bot: #0d1318; --shadow: 0 10px 30px rgba(0, 0, 0, .35);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-width: 320px; color: var(--ink); background: var(--bg); padding-bottom: calc(86px + env(safe-area-inset-bottom));
+    font: 15px/1.45 system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  a { color: inherit; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  h1, h2, h3, p { margin: 0; }
+  .shell { width: min(100% - 28px, 1120px); margin: 0 auto; }
+  [hidden] { display: none !important; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 18px 0 8px; }
+  .eyebrow { font-size: 12px; color: var(--muted); }
+  .topbar h1 { font-size: 26px; font-weight: 700; letter-spacing: -.01em; }
+  .pill { display: inline-flex; align-items: center; justify-content: center; width: 38px; min-height: 38px; border-radius: 999px; border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 80%, transparent); }
+  .pill svg { width: 17px; height: 17px; }
+  .hero { margin: 0 -14px; padding: 6px 14px 20px; background: linear-gradient(180deg, var(--sky-top), var(--sky-bot)); border-radius: 0 0 32px 32px; }
+  .summary { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+  .big { font-size: clamp(34px, 9vw, 48px); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; }
+  .big small { font-size: .4em; color: var(--muted); font-weight: 500; letter-spacing: 0; margin-left: 6px; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .alert { display: flex; gap: 12px; align-items: flex-start; margin-top: 14px; padding: 12px 14px; border-radius: 16px; background: var(--bad-soft); color: var(--bad); font-size: 14px; }
+  .alert.warn { background: var(--warn-soft); color: var(--warn); }
+  .alert b { display: block; } .alert span { color: var(--ink); opacity: .8; font-size: 13px; }
+  h2.sec { font-size: 17px; font-weight: 700; margin: 22px 0 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .shot { position: relative; aspect-ratio: 16 / 9; background: #0b0f13; display: block; }
+  .shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .shot.stale img { filter: grayscale(1) brightness(.6); }
+  .state { position: absolute; left: 10px; top: 10px; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: rgba(0, 0, 0, .66); color: #fff; }
+  .state i { width: 8px; height: 8px; border-radius: 50%; background: var(--good); }
+  .state.quiet i { background: var(--warn); } .state.stalled i { background: var(--bad); }
+  .body { padding: 12px 14px 14px; }
+  .title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .title h3 { font-size: 17px; } .title span { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
+  .nums div { background: var(--surface-2); border-radius: 12px; padding: 7px 10px; }
+  .nums span { font-size: 11px; color: var(--muted); display: block; } .nums b { font-size: 18px; letter-spacing: -.01em; }
+  .label { font-size: 11px; color: var(--muted); margin: 8px 0 4px; display: flex; justify-content: space-between; }
+  .days { display: flex; align-items: end; gap: 5px; height: 44px; }
+  .days div { flex: 1; display: flex; flex-direction: column; justify-content: end; align-items: center; height: 100%; font-size: 10px; color: var(--muted); gap: 2px; }
+  .days i { width: 100%; background: color-mix(in srgb, var(--accent) 50%, transparent); border-radius: 4px 4px 1px 1px; min-height: 2px; }
+  .days div:last-child i { background: var(--accent); }
+  .hours { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; }
+  .hours i { aspect-ratio: 1 / 1.5; border-radius: 3px; background: var(--accent); }
+  .hours-axis { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+  .tag { font-size: 12px; padding: 2px 9px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); }
+  .tag.b { color: var(--ink); }
+  .tag.bad { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+  .tag.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+  .tag.good { background: var(--good-soft); color: var(--good); border-color: transparent; }
+  .signal { display: inline-flex; align-items: end; gap: 2px; height: 12px; vertical-align: -1px; margin-right: 4px; }
+  .signal i { width: 3px; background: currentColor; border-radius: 1px; opacity: .25; } .signal i.on { opacity: 1; }
+  .link { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); text-decoration: none; color: var(--accent); font-weight: 600; font-size: 14px; }
+  .mods { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+  .mod { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
+  .mod b { display: block; } .mod small { color: var(--muted); font-size: 12px; }
+  .skeleton { height: 330px; border-radius: var(--radius); background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%); background-size: 200% 100%; animation: sh 1.4s infinite; border: 1px solid var(--line); }
+  @keyframes sh { to { background-position: -200% 0; } }
+  .err { margin: 12px 0; padding: 12px 14px; border-radius: 14px; background: var(--warn-soft); color: var(--warn); font-size: 14px; }
+  .foot { margin-top: 24px; font-size: 12px; color: var(--muted); text-align: center; }
+  .bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; justify-content: space-around; padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(14px); border-top: 1px solid var(--line); }
+  .nav { flex: 1; max-width: 130px; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--muted); font-size: 11px; padding: 4px; text-decoration: none; }
+  .nav svg { width: 25px; height: 25px; } .nav.active { color: var(--accent); }
+  @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div><p class="eyebrow">Blinkwatch</p><h1>Telecamere</h1></div>
+    <button class="pill" id="theme" type="button" aria-label="Cambia tema"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="theme-icon"></svg></button>
+  </header>
+  <div class="hero">
+    <p class="big"><span id="n-ok">—</span><small id="n-of">telecamere attive</small></p>
+    <p class="sub" id="sub">Caricamento…</p>
+    <div id="alerts"></div>
+  </div>
+  <div id="error" class="err" hidden role="alert"></div>
+  <h2 class="sec">Stato</h2>
+  <div class="grid" id="cams"><div class="skeleton"></div><div class="skeleton"></div></div>
+  <h2 class="sec" id="mods-title" hidden>Archivio USB dei sync module</h2>
+  <div class="mods" id="mods"></div>
+  <p class="foot" id="foot"></p>
+</div>
+<nav class="bottom-nav" aria-label="Navigazione principale">
+  <a class="nav" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18M8 4v5"/></svg><span>Eventi</span></a>
+  <a class="nav active" href="/cameras" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Telecamere</span></a>
+  <a class="nav" href="/label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12 12 20 4 12V4h8z"/><circle cx="8.5" cy="8.5" r="1.3"/></svg><span>Etichetta</span></a>
+  <a class="nav" href="/power"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></svg><span>Consumi</span></a>
+</nav>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (_) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
+};
+const THEMES = ['auto', 'light', 'dark'];
+const THEME_ICON = {
+  auto: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>',
+  light: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
+  dark: '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/>',
+};
+function applyTheme(t) {
+  if (!THEMES.includes(t)) t = 'auto';
+  if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
+  $('theme-icon').innerHTML = THEME_ICON[t];
+  const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.querySelector('meta[name=theme-color]').content = dark ? '#0a1626' : '#cfe3f5';
+}
+$('theme').onclick = () => { const n = THEMES[(THEMES.indexOf(store.get('theme', 'auto')) + 1) % 3]; store.set('theme', n); applyTheme(n); };
+applyTheme(store.get('theme', 'auto'));
+
+const STATE = { ok: 'Attiva', quiet: 'Silenziosa', stalled: 'Ferma' };
+const dur = s => s < 90 ? 'adesso' : s < 5400 ? `${Math.round(s / 60)} min` : s < 172800 ? `${Math.round(s / 3600)} h` : `${Math.round(s / 86400)} giorni`;
+const gap = s => s < 5400 ? `${Math.max(1, Math.round(s / 60))} min` : `${Math.round(s / 3600)} h`;
+const short = n => n.replace(/^Telecamera\s+/i, '');
+const hhmm = iso => new Date(iso).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+function signal(level, max = 5) {
+  const n = Math.max(0, Math.min(max, Number(level) || 0));
+  return `<span class="signal" aria-hidden="true">${Array.from({ length: max }, (_, i) => `<i class="${i < n ? 'on' : ''}" style="height:${4 + i * 2}px"></i>`).join('')}</span>`;
+}
+function blinkTags(c) {
+  const b = c.blink; if (!b) return '';
+  const out = [];
+  if (b.battery !== undefined && b.battery !== null) {
+    const low = String(b.battery).toLowerCase() !== 'ok';
+    out.push(`<span class="tag ${low ? 'bad' : 'good'}">Batteria ${low ? 'scarica' : 'ok'}${b.battery_level != null ? ` · ${esc(b.battery_level)}%` : ''}</span>`);
+  } else if (b.battery_level != null) out.push(`<span class="tag">Batteria ${esc(b.battery_level)}%</span>`);
+  if (b.wifi_strength != null) {  // Blink reports dBm for cameras (-50 excellent ... -80 weak)
+    const d = Number(b.wifi_strength), bars = d >= -50 ? 5 : d >= -60 ? 4 : d >= -70 ? 3 : d >= -80 ? 2 : 1;
+    out.push(`<span class="tag ${bars <= 2 ? 'warn' : ''}">${signal(bars)}Wi-Fi ${d} dBm</span>`);
+  }
+  if (b.temperature_c != null) out.push(`<span class="tag">${Math.round(b.temperature_c)}°C</span>`);
+  if (b.motion_enabled === false) out.push('<span class="tag warn">Movimento disattivato</span>');
+  return out.join('');
+}
+function card(c) {
+  const maxD = Math.max(1, ...c.days), maxH = Math.max(1, ...c.hours);
+  const today = new Date(); const dow = i => new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6 + i).toLocaleDateString('it-IT', { weekday: 'narrow' });
+  const who = Object.entries(c.who).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([n, k]) => `<span class="tag b">${esc(n)} ${k}</span>`).join('');
+  const cats = [['persona', 'persone'], ['animale', 'animali'], ['veicolo', 'veicoli']].filter(([k]) => c.cats[k]).map(([k, l]) => `<span class="tag">${c.cats[k]} ${l}</span>`).join('');
+  return `<article class="card"><a class="shot ${c.state === 'stalled' ? 'stale' : ''}" href="/?camera=${encodeURIComponent(c.camera)}" aria-label="Eventi di ${esc(short(c.camera))}">
+      <img loading="lazy" alt="" src="/thumb/${encodeURIComponent(c.last_id)}" onerror="this.style.display='none'"><span class="state ${c.state}"><i></i>${STATE[c.state]}</span></a>
+    <div class="body"><div class="title"><h3>${esc(short(c.camera))}</h3><span>ultima clip ${c.age_s < 90 ? 'adesso' : dur(c.age_s) + ' fa'}</span></div>
+      <p class="eyebrow">${hhmm(c.last_at)} · di solito una clip ogni ${gap(c.expected_gap_s)}</p>
+      <div class="nums"><div><span>Oggi</span><b>${c.today}</b></div><div><span>7 giorni</span><b>${c.week}</b></div><div><span>Totale</span><b>${c.total}</b></div></div>
+      <div class="label"><span>Clip per giorno</span><span>ultimi 7</span></div>
+      <div class="days">${c.days.map((n, i) => `<div title="${n} clip"><i style="height:${Math.max(2, n / maxD * 30)}px"></i>${dow(i)}</div>`).join('')}</div>
+      <div class="label"><span>Ore più attive</span></div>
+      <div class="hours" role="img" aria-label="Attività per ora del giorno">${c.hours.map((n, h) => `<i title="${h}:00 · ${n} clip" style="opacity:${n ? (.15 + .85 * n / maxH).toFixed(2) : .07}"></i>`).join('')}</div>
+      <div class="hours-axis"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
+      <div class="tags">${blinkTags(c)}${cats}${who}</div>
+      <a class="link" href="/?camera=${encodeURIComponent(c.camera)}">Vedi gli eventi <span>→</span></a></div></article>`;
+}
+function render(d) {
+  const cams = d.cameras, ok = cams.filter(c => c.state === 'ok').length;
+  $('n-ok').textContent = ok; $('n-of').textContent = `su ${cams.length} telecamere attive`;
+  const stalled = cams.filter(c => c.state === 'stalled'), quiet = cams.filter(c => c.state === 'quiet');
+  const todayN = cams.reduce((a, c) => a + c.today, 0);
+  $('sub').textContent = `${todayN} clip oggi${quiet.length ? ` · ${quiet.length} silenziose` : ''}${stalled.length ? ` · ${stalled.length} ferme` : ''}`;
+  const lowBat = cams.filter(c => c.blink && String(c.blink.battery).toLowerCase() === 'low');
+  $('alerts').innerHTML = lowBat.map(c => `<div class="alert warn"><b>🔋</b><div><b>${esc(short(c.camera))}: batteria scarica</b><span>Sostituisci le pile (${c.blink.battery_voltage ? (c.blink.battery_voltage / 100).toFixed(2) + ' V' : 'livello basso'}).</span></div></div>`).join('') + stalled.map(c => `<div class="alert"><b>!</b><div><b>${esc(short(c.camera))} non registra da ${dur(c.age_s)}</b><span>Di solito una clip ogni ${gap(c.expected_gap_s)}. Controlla batteria e Wi-Fi nell'app Blink.</span></div></div>`).join('')
+    + quiet.map(c => `<div class="alert warn"><b>i</b><div><b>${esc(short(c.camera))} è silenziosa da ${dur(c.age_s)}</b><span>Può essere normale se non passa nessuno.</span></div></div>`).join('');
+  $('cams').innerHTML = cams.map(card).join('');
+  $('mods-title').hidden = !d.modules.length;
+  $('mods').innerHTML = d.modules.map(m => `<div class="mod"><div><b>${esc(m.module)}</b><small>${esc(m.cameras.map(short).join(', '))}</small></div>
+    <span class="tag ${m.status === 'active' ? 'good' : 'bad'}">${m.status === 'active' ? 'Archivio attivo' : esc(m.status)}</span></div>`).join('');
+  $('foot').textContent = d.last_processed ? `Ultima clip elaborata dal watcher: ${hhmm(d.last_processed)} · stato calcolato dalla frequenza abituale di ogni camera` : '';
+}
+async function load() {
+  try {
+    const r = await fetch('/api/cameras?tz=' + (-new Date().getTimezoneOffset()), { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    render(await r.json()); $('error').hidden = true;
+  } catch (e) { $('error').textContent = `Non riesco a caricare lo stato (${e.message}).`; $('error').hidden = false; }
+}
+addEventListener('error', e => { $('error').textContent = `Errore della pagina: ${e.message}`; $('error').hidden = false; });
+load(); setInterval(load, 60000);
+</script>
+</body>
+</html>
