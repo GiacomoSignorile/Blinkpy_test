@@ -15,7 +15,7 @@ cat > ~/Library/LaunchAgents/it.powerwatch.plist <<PLIST
 <plist version="1.0"><dict>
   <key>Label</key><string>it.powerwatch</string>
   <key>ProgramArguments</key><array><string>$PY</string><string>$HOME/powerwatch/collector.py</string></array>
-  <key>EnvironmentVariables</key><dict><key>POWER_URL</key><string>$HUB</string></dict>
+  <key>EnvironmentVariables</key><dict><key>POWER_URL</key><string>$HUB</string><key>POWER_HOST</key><string>${POWER_HOST:-Mac}</string></dict>
   <key>RunAtLoad</key><true/><key>KeepAlive</key><true/>
   <key>StandardOutPath</key><string>$HOME/powerwatch/log.txt</string><key>StandardErrorPath</key><string>$HOME/powerwatch/log.txt</string>
 </dict></plist>

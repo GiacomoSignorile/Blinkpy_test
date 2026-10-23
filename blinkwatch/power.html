@@ -2,68 +2,759 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Consumi</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#dfeaf3">
+<title>Consumi · Blinkwatch</title>
 <style>
-  :root { --bg:#0f1115; --card:#181b22; --text:#e8eaf0; --muted:#8b92a3; --line:#262a34; --accent:#7c8cff; }
-  @media (prefers-color-scheme: light) { :root { --bg:#f4f5f8; --card:#fff; --text:#1a1d24; --muted:#697085; --line:#e1e4ec; } }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.45 system-ui,sans-serif; }
-  header { padding:12px 16px; display:flex; gap:12px; align-items:center; border-bottom:1px solid var(--line); flex-wrap:wrap; }
-  header a { color:var(--accent); text-decoration:none; } h1 { font-size:18px; margin:0; flex:1; }
-  main { max-width:760px; margin:0 auto; padding:16px; }
-  .total { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
-  .total b { font-size:30px; } .muted { color:var(--muted); font-size:13px; }
-  .host { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
-  .host h2 { font-size:16px; margin:0 0 6px; display:flex; justify-content:space-between; }
-  .row { display:flex; justify-content:space-between; font-size:14px; padding:2px 0; }
-  input, select { background:var(--card); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px 10px; font:inherit; width:90px; }
-  .warn { color:#d69e2e; }
+  :root {
+    color-scheme: light;
+    --bg: #eef3f7; --surface: #fff; --surface-2: #f5f8fb; --ink: #16222b; --muted: #6d7f8b; --line: #e1e9ef;
+    --accent: #2f6fe4; --accent-soft: #e6eefc; --good: #2fa874; --good-soft: #e3f5ec; --warn: #e8913c; --warn-soft: #fff0e0; --bad: #d9534f;
+    --sky-top: #cfe3f5; --sky-bot: #eef3f7; --wall: #f4f6f8; --wall-2: #dfe5ea; --roof: #4d5a66; --glass: #f6d58a; --ground: #e6ecf0;
+    --flow: #35c58a; --shadow: 0 10px 30px rgba(30, 60, 90, .08);
+    --c1: #2f6fe4; --c2: #2fa874; --c3: #e8913c; --c4: #8a5cd6; --c5: #d9558f; --c6: #1ba3b8;
+    --radius: 22px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0d1318; --surface: #161e25; --surface-2: #1c262f; --ink: #e8eef2; --muted: #8b9ba6; --line: #26323c;
+      --accent: #5b9bff; --accent-soft: #1b2b45; --good: #43d196; --good-soft: #14302a; --warn: #f3a65a; --warn-soft: #3a2a17; --bad: #ef7773;
+      --sky-top: #0a1626; --sky-bot: #0d1318; --wall: #2b3640; --wall-2: #222c35; --roof: #151c22; --glass: #ffcf70; --ground: #19232b;
+      --flow: #43d196; --shadow: 0 10px 30px rgba(0, 0, 0, .35);
+      --c1: #5b9bff; --c2: #43d196; --c3: #f3a65a; --c4: #a98af0; --c5: #ef7fb0; --c6: #4fc9dc;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0d1318; --surface: #161e25; --surface-2: #1c262f; --ink: #e8eef2; --muted: #8b9ba6; --line: #26323c;
+    --accent: #5b9bff; --accent-soft: #1b2b45; --good: #43d196; --good-soft: #14302a; --warn: #f3a65a; --warn-soft: #3a2a17; --bad: #ef7773;
+    --sky-top: #0a1626; --sky-bot: #0d1318; --wall: #2b3640; --wall-2: #222c35; --roof: #151c22; --glass: #ffcf70; --ground: #19232b;
+    --flow: #43d196; --shadow: 0 10px 30px rgba(0, 0, 0, .35);
+    --c1: #5b9bff; --c2: #43d196; --c3: #f3a65a; --c4: #a98af0; --c5: #ef7fb0; --c6: #4fc9dc;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; min-width: 320px; color: var(--ink); background: var(--bg);
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+    font: 15px/1.45 system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  h1, h2, h3, p { margin: 0; }
+  .shell { width: min(100% - 28px, 1080px); margin: 0 auto; }
+  .hidden { display: none !important; }
+
+  /* top bar */
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 18px 0 8px; position: relative; z-index: 2; }
+  .topbar h1 { font-size: 26px; font-weight: 700; letter-spacing: -.01em; }
+  .eyebrow { font-size: 12px; color: var(--muted); }
+  .toolbar { display: flex; align-items: center; gap: 8px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--surface) 80%, transparent); font-size: 13px; text-decoration: none; color: var(--ink); backdrop-filter: blur(6px); }
+  .pill svg { width: 17px; height: 17px; }
+  select.pill { appearance: none; padding-right: 12px; max-width: 150px; }
+  .icon-btn { width: 38px; padding: 0; justify-content: center; }
+
+  /* hero */
+  .hero { position: relative; margin: 0 -14px; padding: 0 14px 6px; background: linear-gradient(180deg, var(--sky-top), var(--sky-bot)); border-radius: 0 0 32px 32px; overflow: hidden; }
+  .hero-head { padding: 10px 0 0; }
+  .status { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.on { background: var(--good); box-shadow: 0 0 0 4px color-mix(in srgb, var(--good) 25%, transparent); animation: pulse 2s infinite; }
+  .dot.off { background: var(--muted); opacity: .5; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 7px transparent; } }
+  .total { font-size: clamp(46px, 13vw, 72px); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; margin-top: 4px; }
+  .total small { font-size: .32em; font-weight: 500; color: var(--muted); margin-left: 6px; letter-spacing: 0; }
+  .hero-sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .scene-wrap { position: relative; max-width: 560px; margin: 6px auto 0; aspect-ratio: 360 / 300; }
+  .scene-wrap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .node { position: absolute; font-size: 13px; color: var(--muted); line-height: 1.2; background: none; border: 0; padding: 4px; text-align: left; }
+  .node b { display: block; font-size: clamp(21px, 6.2vw, 30px); color: var(--ink); font-weight: 700; letter-spacing: -.02em; margin-top: 2px; }
+  .node b small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 3px; letter-spacing: 0; }
+  .node em { display: block; font-style: normal; font-size: 12px; color: var(--good); margin-top: 1px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .node.tl { left: 3%; top: 3%; } .node.tr { right: 3%; top: 3%; text-align: right; }
+  .node.bl { left: 3%; bottom: 1%; } .node.br { right: 3%; bottom: 1%; text-align: right; }
+  .node.tr em, .node.br em { margin-left: auto; }
+  .flow { fill: none; stroke: var(--flow); stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 5 7; animation: flow 1.1s linear infinite; }
+  .flow.idle { animation: none; stroke: var(--muted); opacity: .35; }
+  @keyframes flow { to { stroke-dashoffset: -12; } }
+  .wifi { fill: none; stroke: var(--flow); stroke-width: 2; stroke-linecap: round; opacity: .8; }
+  .star { fill: #fff; opacity: 0; } :root[data-theme="dark"] .star { opacity: .7; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .star { opacity: .7; } }
+
+  /* cards */
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+  .card { background: var(--surface); border-radius: var(--radius); padding: 16px 16px 12px; box-shadow: var(--shadow); border: 1px solid var(--line); min-width: 0; }
+  .card h3 { font-size: 16px; font-weight: 600; }
+  .card .period { font-size: 12px; color: var(--muted); }
+  .card .big { font-size: clamp(26px, 7vw, 34px); font-weight: 700; letter-spacing: -.02em; margin-top: 4px; }
+  .card .big small { font-size: 13px; color: var(--muted); font-weight: 500; margin-left: 4px; }
+  .card .note { font-size: 12px; color: var(--muted); margin-top: 2px; min-height: 17px; }
+  .spark { width: 100%; height: 56px; display: block; margin-top: 8px; }
+  .spark-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+  section { margin-top: 26px; scroll-margin-top: 12px; }
+  .section-head { display: flex; align-items: end; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .section-head h2 { font-size: 19px; font-weight: 700; }
+  .section-head p { font-size: 13px; color: var(--muted); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 13px; color: var(--muted); }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* charts */
+  .chart-card { padding: 14px 12px 10px; }
+  .chart { position: relative; width: 100%; touch-action: pan-y; }
+  .chart svg { display: block; width: 100%; overflow: visible; }
+  .chart text { fill: var(--muted); font-size: 11px; }
+  .tip { position: absolute; top: 0; pointer-events: none; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 7px 10px; font-size: 12px;
+    box-shadow: var(--shadow); white-space: nowrap; transform: translateX(-50%); z-index: 3; }
+  .tip i { display: inline-block; width: 8px; height: 8px; border-radius: 3px; margin-right: 6px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 4px 0; font-size: 12px; color: var(--muted); }
+  .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; }
+  .empty { color: var(--muted); text-align: center; padding: 26px 10px; font-size: 14px; }
+
+  /* device lists */
+  .list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+  .dev { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); text-align: left; box-shadow: var(--shadow); }
+  .dev:hover { border-color: var(--accent); }
+  .dev .ico { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; flex: none; background: var(--accent-soft); color: var(--accent); }
+  .dev .ico svg { width: 22px; height: 22px; }
+  .dev .main { flex: 1; min-width: 0; }
+  .dev .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dev .sub { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dev .val { text-align: right; font-weight: 700; font-size: 17px; white-space: nowrap; }
+  .dev .val small { display: block; font-weight: 500; font-size: 11px; color: var(--muted); }
+  .bar { height: 5px; border-radius: 3px; background: var(--surface-2); margin-top: 7px; overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+  .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); }
+  .more { margin-top: 10px; }
+
+  /* insights */
+  .insights { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .insight { display: flex; gap: 12px; padding: 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); }
+  .insight .ico { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex: none; background: var(--good-soft); color: var(--good); font-weight: 700; }
+  .insight.warn .ico { background: var(--warn-soft); color: var(--warn); }
+  .insight h3 { font-size: 14px; font-weight: 600; } .insight p { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  /* settings + forms */
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .row h3 { font-size: 15px; font-weight: 600; } .row p { font-size: 12px; color: var(--muted); }
+  .field { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  input[type=number], input[type=text], select.f { min-height: 40px; padding: 0 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); width: 110px; }
+  input[type=text] { width: 100%; max-width: 220px; }
+  .btn { min-height: 40px; padding: 0 16px; border-radius: 12px; border: 0; background: var(--accent); color: #fff; font-weight: 600; }
+  .btn.ghost { background: var(--surface-2); color: var(--ink); border: 1px solid var(--line); }
+  .saved { font-size: 12px; color: var(--good); margin-left: 8px; }
+  .foot { margin: 26px 0 0; font-size: 12px; color: var(--muted); text-align: center; }
+  .load-error { display: none; margin: 12px 0; padding: 12px 14px; border-radius: 14px; background: var(--warn-soft); color: var(--warn); font-size: 14px; }
+
+  /* detail view */
+  .back { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; color: var(--accent); font-weight: 600; padding: 8px 0; }
+  .detail-hero { background: linear-gradient(180deg, var(--sky-top), var(--sky-bot)); margin: 0 -14px; padding: 6px 14px 22px; border-radius: 0 0 32px 32px; }
+  .detail-title { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+  .detail-title .ico { width: 48px; height: 48px; border-radius: 15px; display: grid; place-items: center; background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+  .detail-title .ico svg { width: 26px; height: 26px; }
+  .detail-title h2 { font-size: 22px; line-height: 1.15; } .detail-title p { font-size: 12px; color: var(--muted); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 14px; }
+  .stat { background: var(--surface); border-radius: 18px; padding: 12px 14px; border: 1px solid var(--line); }
+  .stat span { font-size: 12px; color: var(--muted); } .stat b { display: block; font-size: 21px; margin-top: 2px; letter-spacing: -.01em; }
+  .stat b small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 3px; }
+  .bars { display: flex; align-items: end; gap: 8px; height: 110px; margin-top: 6px; }
+  .bars div { flex: 1; text-align: center; font-size: 11px; color: var(--muted); display: flex; flex-direction: column; justify-content: end; height: 100%; }
+  .bars i { display: block; background: var(--accent); border-radius: 6px 6px 2px 2px; min-height: 3px; margin-top: 3px; }
+  .bars span { color: var(--ink); font-weight: 600; font-size: 11px; }
+
+  /* bottom nav */
+  .bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; justify-content: space-around; padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(14px); border-top: 1px solid var(--line); }
+  .nav-button { flex: 1; max-width: 120px; display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; border: 0; color: var(--muted); font-size: 11px; padding: 4px; }
+  .nav-button svg { width: 25px; height: 25px; }
+  .nav-button.active { color: var(--accent); }
+
+  @media (min-width: 760px) {
+    .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .hero { margin: 0; border-radius: 0 0 32px 32px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .flow, .dot.on { animation: none; } html { scroll-behavior: auto; } }
 </style>
 </head>
 <body>
-<header><h1>Consumi dei PC</h1><label class="muted">€/kWh <input id="price" type="number" step="0.01" value="0.28"></label>
-  <select id="month"></select><a href="/">← Eventi</a></header>
-<main>
-  <div class="total"><div class="muted">Totale stimato del mese (tutti i PC)</div><b id="kwh">–</b> kWh <span id="cost" class="muted"></span>
-    <div class="muted" style="margin-top:6px">Stima: CPU e GPU sono misurate; scheda madre, dischi, ventole e perdite dell'alimentatore sono una stima regolabile per ogni PC.</div></div>
-  <div id="hosts"></div>
-</main>
+<div class="shell" id="top">
+  <header class="topbar">
+    <div><p class="eyebrow">Monitoraggio energia</p><h1>Consumi</h1></div>
+    <div class="toolbar">
+      <select class="pill" id="month" aria-label="Seleziona mese"></select>
+      <button class="pill icon-btn" id="theme" type="button" aria-label="Cambia tema"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="theme-icon"></svg></button>
+      <a class="pill icon-btn" href="/" aria-label="Torna agli eventi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5-7 7 7 7"/></svg></a>
+    </div>
+  </header>
+  <div id="load-error" class="load-error" role="alert"></div>
+
+  <!-- ===== home ===== -->
+  <div id="view-home">
+    <div class="hero">
+      <div class="hero-head">
+        <p class="status"><span class="dot" id="live-dot"></span><span id="online-label">Connessione…</span></p>
+        <p class="total" aria-live="polite"><span id="live-power">—</span><small id="live-unit">W</small></p>
+        <p class="hero-sub" id="live-caption">In attesa delle letture.</p>
+      </div>
+      <div class="scene-wrap">
+        <svg viewBox="0 0 360 300" role="img" aria-label="Schema della casa con i flussi di potenza">
+          <circle class="star" cx="40" cy="70" r="1.4"/><circle class="star" cx="320" cy="48" r="1.6"/><circle class="star" cx="200" cy="30" r="1.2"/><circle class="star" cx="110" cy="40" r="1.2"/><circle class="star" cx="280" cy="100" r="1.1"/>
+          <ellipse cx="180" cy="262" rx="165" ry="16" fill="var(--ground)"/>
+          <!-- house -->
+          <rect x="82" y="140" width="196" height="116" rx="4" fill="var(--wall)"/>
+          <rect x="82" y="140" width="196" height="116" rx="4" fill="none" stroke="var(--wall-2)" stroke-width="1.5"/>
+          <path d="M70 146 180 74l110 72z" fill="var(--roof)"/>
+          <rect x="236" y="88" width="16" height="30" fill="var(--roof)"/>
+          <rect x="198" y="168" width="52" height="64" rx="4" fill="var(--glass)" opacity=".92"/>
+          <path d="M224 168v64M198 200h52" stroke="var(--wall)" stroke-width="3"/>
+          <rect x="106" y="190" width="54" height="66" rx="3" fill="var(--wall-2)"/>
+          <circle cx="152" cy="224" r="2.4" fill="var(--muted)"/>
+          <!-- router hub on the wall -->
+          <rect x="159" y="150" width="42" height="14" rx="5" fill="var(--surface)" stroke="var(--wall-2)"/>
+          <circle cx="170" cy="157" r="2.2" fill="var(--flow)"/><circle cx="178" cy="157" r="2.2" fill="var(--flow)"/>
+          <path class="wifi" d="M172 143a12 12 0 0 1 16 0M175 147a7 7 0 0 1 10 0"/>
+          <!-- flows: PCs -> hub -> network -> grid -->
+          <path class="flow" id="flow-pc" d="M52 96V157h107"/>
+          <path class="flow" id="flow-net" d="M201 157h106V96"/>
+          <path class="flow" id="flow-top" d="M52 262V222"/>
+          <path class="flow" id="flow-cost" d="M307 262V222"/>
+        </svg>
+        <div class="node tl"><span>PC</span><b><span id="n-pc">—</span><small id="n-pc-u">W</small></b><em id="n-pc-s"></em></div>
+        <div class="node tr"><span>Altri dispositivi</span><b><span id="n-net">—</span><small id="n-net-u">W</small></b><em id="n-net-s"></em></div>
+        <div class="node bl"><span>Più consumo</span><b><span id="n-top">—</span><small id="n-top-u">W</small></b><em id="n-top-s"></em></div>
+        <div class="node br"><span>Costo orario</span><b><span id="n-cost">—</span><small>€/h</small></b><em id="n-cost-s"></em></div>
+      </div>
+      <div class="legend" style="margin-top:0;padding-bottom:10px" aria-label="Componenti misurate in tempo reale">
+        <span>CPU <b id="live-cpu">—</b></span><span>GPU <b id="live-gpu">—</b></span>
+      </div>
+    </div>
+
+    <div class="grid">
+      <article class="card">
+        <h3>Oggi</h3><p class="period" id="today-period">dalla mezzanotte</p>
+        <p class="big"><span id="today-value">—</span><small>kWh</small></p>
+        <p class="note" id="today-note"></p>
+        <svg class="spark" id="today-chart" viewBox="0 0 160 56" preserveAspectRatio="none" aria-label="Potenza nelle ultime 24 ore"></svg>
+        <div class="spark-axis"><span>24 h fa</span><span>ora</span></div>
+      </article>
+      <article class="card" id="metric-energy">
+        <h3>Mese</h3><p class="period" id="energy-period">—</p>
+        <p class="big"><span id="energy-value">—</span><small>kWh</small></p>
+        <p class="note" id="energy-note"></p>
+        <svg class="spark" id="energy-chart" viewBox="0 0 160 56" preserveAspectRatio="none" aria-label="Andamento mensile del consumo"></svg>
+        <div class="spark-axis"><span id="history-first">—</span><span id="history-last">—</span></div>
+      </article>
+      <article class="card">
+        <h3>Costo</h3><p class="period" id="cost-period">mese in corso</p>
+        <p class="big"><span id="cost-value">—</span></p>
+        <p class="note" id="cost-note"></p>
+      </article>
+      <article class="card" id="metric-measured">
+        <h3>CO₂</h3><p class="period" id="measured-period">mese in corso</p>
+        <p class="big"><span id="co2-value">—</span><small>kg</small></p>
+        <p class="note" id="measured-note">CPU + GPU misurate: <b id="measured-value">—</b> kWh</p>
+      </article>
+    </div>
+
+    <section id="devices" aria-labelledby="devices-title">
+      <div class="section-head"><div><h2 id="devices-title">Dispositivi</h2><p id="device-caption">Tocca un dispositivo per i dettagli</p></div><span class="eyebrow" id="device-count"></span></div>
+      <h3 class="eyebrow" style="margin:0 0 8px">PC · misurati</h3>
+      <div id="device-list" class="list" aria-live="polite"><div class="empty">Caricamento…</div></div>
+      <h3 class="eyebrow" style="margin:18px 0 8px">Rete di casa · potenza stimata <span id="net-caption"></span></h3>
+      <div id="net-list" class="list"></div>
+      <button class="chip more hidden" id="net-more" type="button"></button>
+    </section>
+
+    <section id="history" aria-labelledby="history-title">
+      <div class="section-head">
+        <div><h2 id="history-title">Storico</h2><p>Potenza dei PC nel tempo</p></div>
+        <div class="chips" role="group" aria-label="Intervallo" id="home-ranges"></div>
+      </div>
+      <div class="card chart-card"><div class="chart" id="home-chart"></div><div class="legend" id="home-legend"></div></div>
+    </section>
+
+    <section id="insights" aria-labelledby="insights-title">
+      <div class="section-head"><div><h2 id="insights-title">Spunti</h2><p>Cosa dicono i numeri</p></div></div>
+      <div class="insights" id="insight-list"></div>
+    </section>
+
+    <section id="settings" aria-labelledby="settings-title">
+      <div class="section-head"><div><h2 id="settings-title">Impostazioni</h2><p>Salvate in questo browser</p></div></div>
+      <div class="card">
+        <div class="row"><div><h3>Prezzo per kWh</h3><p>Per stimare costi e previsioni.</p></div>
+          <label class="field"><input id="price" type="number" min="0" max="10" step="0.01" inputmode="decimal" value="0.28" aria-label="Prezzo dell'energia in euro per kilowattora"> €/kWh</label></div>
+        <div class="row"><div><h3>Emissioni</h3><p>kg di CO₂ per kWh (mix elettrico italiano ≈ 0,25).</p></div>
+          <label class="field"><input id="co2" type="number" min="0" max="2" step="0.01" inputmode="decimal" value="0.25" aria-label="Chilogrammi di CO2 per kilowattora"> kg/kWh</label></div>
+        <div class="row"><div><h3>Tema</h3><p id="theme-label">Automatico</p></div><button class="chip" id="theme2" type="button">Cambia</button></div>
+      </div>
+      <p class="foot">CPU e GPU sono misurate dove i contatori lo permettono; il resto del PC e le perdite dell'alimentatore sono stime configurabili. Gli altri dispositivi di rete non hanno un contatore: la potenza è un valore tipico per categoria, modificabile.</p>
+    </section>
+  </div>
+
+  <!-- ===== detail ===== -->
+  <div id="view-detail" class="hidden"></div>
+</div>
+
+<nav class="bottom-nav" aria-label="Navigazione principale">
+  <button class="nav-button active" type="button" data-target="top" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 10.5 8.5-7 8.5 7M6 9v11h12V9m-8 11v-6h4v6"/></svg><span>Home</span></button>
+  <button class="nav-button" type="button" data-target="devices"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4" y="4" width="16" height="12" rx="2"/><path d="M9 20h6m-3-4v4"/></svg><span>Dispositivi</span></button>
+  <button class="nav-button" type="button" data-target="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 19V9m5 10V5m5 14v-7m5 7V8"/></svg><span>Storico</span></button>
+  <button class="nav-button" type="button" data-target="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.3 13.3a7.4 7.4 0 0 0 0-2.6l1.4-1.1-1.5-2.6-1.7.6a7.5 7.5 0 0 0-2.2-1.3L15 4.5h-3l-.3 1.8a7.5 7.5 0 0 0-2.2 1.3l-1.7-.6-1.5 2.6 1.4 1.1a7.4 7.4 0 0 0 0 2.6l-1.4 1.1 1.5 2.6 1.7-.6a7.5 7.5 0 0 0 2.2 1.3l.3 1.8h3l.3-1.8a7.5 7.5 0 0 0 2.2-1.3l1.7.6 1.5-2.6z"/></svg><span>Impostazioni</span></button>
+</nav>
+
 <script>
+'use strict';
 const $ = id => document.getElementById(id);
-let data = null;
-try { const p = localStorage.getItem("kwhPrice"); if (p) $("price").value = p; } catch (e) {}
-const now = new Date();
-for (let i = 0; i < 6; i++) {
-  const d = new Date(now.getFullYear(), now.getMonth() - i, 1), v = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
-  $("month").add(new Option(d.toLocaleString("it-IT", { month: "long", year: "numeric" }), v));
+const MONTHS_BACK = 6;
+const COLORS = ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)', 'var(--c5)', 'var(--c6)'];
+const KINDS = { pc: 'Computer', router: 'Router / rete', tv: 'TV', phone: 'Telefono', tablet: 'Tablet', printer: 'Stampante', camera: 'Telecamera',
+  speaker: 'Altoparlante', console: 'Console', nas: 'NAS', iot: 'Domotica', other: 'Altro' };
+const ICONS = {
+  pc: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  laptop: '<rect x="5" y="5" width="14" height="10" rx="1.5"/><path d="M3 19h18"/>',
+  phone: '<rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/>',
+  tablet: '<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M11 18h2"/>',
+  tv: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="m8 3 4 3 4-3"/>',
+  router: '<rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 17h.01M12 14V9M8.5 9.5a5 5 0 0 1 7 0"/>',
+  camera: '<path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/>',
+  speaker: '<rect x="6" y="3" width="12" height="18" rx="3"/><circle cx="12" cy="14" r="3"/><path d="M12 7h.01"/>',
+  printer: '<path d="M7 9V3h10v6M7 17H4v-7h16v7h-3"/><rect x="7" y="14" width="10" height="7"/>',
+  console: '<path d="M6 8h12a4 4 0 0 1 4 4v2a3 3 0 0 1-5 2l-1-1H8l-1 1a3 3 0 0 1-5-2v-2a4 4 0 0 1 4-4z"/>',
+  nas: '<rect x="4" y="3" width="16" height="8" rx="2"/><rect x="4" y="13" width="16" height="8" rx="2"/><path d="M8 7h.01M8 17h.01"/>',
+  other: '<path d="M9 3v5M15 3v5M6 8h12v4a6 6 0 0 1-12 0zM12 18v3"/>',
+};
+ICONS.iot = ICONS.other;
+const icon = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k] || ICONS.other}</svg>`;
+
+const S = { ov: null, monthly: null, history: [], day: null, hostSeries: null, homeRange: 24, detailRange: 24, showHidden: false };
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (_) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
+};
+
+/* ---------- helpers ---------- */
+const num = v => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v))) ? null : Number(v);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nf = (v, d = 1) => num(v) === null ? '—' : new Intl.NumberFormat('it-IT', { maximumFractionDigits: d }).format(v);
+const kwhF = v => num(v) === null ? '—' : new Intl.NumberFormat('it-IT', { minimumFractionDigits: v < 10 ? 2 : 1, maximumFractionDigits: 2 }).format(v);
+const money = v => num(v) === null ? '—' : new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v);
+const power = w => num(w) === null ? { v: '—', u: 'W' } : (Math.abs(w) >= 1000 ? { v: nf(w / 1000, 2), u: 'kW' } : { v: nf(w, w < 10 ? 1 : 0), u: 'W' });
+const price = () => Math.max(0, num($('price').value) ?? 0.28);
+const co2f = () => Math.max(0, num($('co2').value) ?? 0.25);
+const isDetail = () => /^#\/(pc|net)\//.test(location.hash);  // '#/' alone (the back button) is the home
+const hostName = h => {
+  if (h.alias) return h.alias;
+  const short = h.host.split('.')[0];
+  const clash = S.ov && S.ov.hosts.filter(o => o.host.split('.')[0] === short && !o.alias).length > 1;
+  return clash ? h.host.replace(/\.homenet\.telecomitalia\.it$/, '') : short;  // two PCs with the same short name: keep the suffix
+};
+const netName = d => d.alias || (d.hostname ? d.hostname.split('.')[0] : d.mac);
+const hostIcon = h => h.has_batt ? 'laptop' : 'pc';
+const midnight = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return Math.floor(d / 1000); };
+const fresh = h => h.age_s !== null && h.age_s <= 300 && h.wall_w !== null;
+const monthShift = (v, n) => { const [y, m] = v.split('-').map(Number); const d = new Date(y, m - 1 + n, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
+const shortMonth = v => { const [y, m] = v.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleString('it-IT', { month: 'short' }).replace('.', ''); };
+const ago = s => s < 90 ? 'adesso' : s < 5400 ? `${Math.round(s / 60)} min fa` : s < 172800 ? `${Math.round(s / 3600)} h fa` : `${Math.round(s / 86400)} giorni fa`;
+const api = async (path, body) => {
+  const r = await fetch(path, body === undefined ? { cache: 'no-store' } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+};
+function setText(id, v) { $(id).textContent = v; }
+function setPower(idV, idU, w) { const p = power(w); setText(idV, p.v); if (idU) setText(idU, p.u); }
+
+/* ---------- theme ---------- */
+const THEMES = ['auto', 'light', 'dark'];
+const THEME_ICON = {
+  auto: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17" /><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>',
+  light: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
+  dark: '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/>',
+};
+function applyTheme(t) {
+  const root = document.documentElement;
+  if (t === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', t);
+  $('theme-icon').innerHTML = THEME_ICON[t];
+  setText('theme-label', { auto: 'Automatico (segue il telefono)', light: 'Chiaro', dark: 'Scuro' }[t]);
+  const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.querySelector('meta[name=theme-color]').content = dark ? '#0a1626' : '#cfe3f5';
 }
-function render() {
-  if (!data) return;
-  const price = parseFloat($("price").value) || 0;
-  try { localStorage.setItem("kwhPrice", $("price").value); } catch (e) {}
-  const kwh = v => (v < 10 ? v.toFixed(2) : v.toFixed(1));  // small totals must not collapse to "0.0"
-  const liveRow = h => {
-    const l = h.live;
-    if (!l || l.age_s > 300) return `<div class="row"><span>Adesso</span><span class="muted">nessun dato recente${l ? " (" + Math.round(l.age_s / 60) + " min fa)" : ""}</span></div>`;
-    const parts = l.sys_w != null ? [`sistema ${l.sys_w} W`] : [l.cpu_w != null ? `CPU ${l.cpu_w} W` : null, l.gpu_w != null ? `GPU ${l.gpu_w} W` : null].filter(Boolean);
-    return `<div class="row"><span><b>Adesso</b></span><span><b>${l.wall_w ?? "–"} W</b> <span class="muted">alla presa (${parts.join(" · ")})</span></span></div>`;
+function cycleTheme() {
+  const cur = store.get('theme', 'auto');
+  const next = THEMES[(THEMES.indexOf(cur) + 1) % 3];
+  store.set('theme', next); applyTheme(next);
+}
+$('theme').onclick = $('theme2').onclick = cycleTheme;
+applyTheme(store.get('theme', 'auto'));
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => applyTheme(store.get('theme', 'auto')));
+
+const savedPrice = store.get('kwhPrice', null); if (savedPrice && num(savedPrice) !== null) $('price').value = savedPrice;
+const savedCo2 = store.get('co2', null); if (savedCo2 && num(savedCo2) !== null) $('co2').value = savedCo2;
+$('price').addEventListener('input', () => { store.set('kwhPrice', $('price').value); renderAll(); });
+$('co2').addEventListener('input', () => { store.set('co2', $('co2').value); renderAll(); });
+
+const now0 = new Date();
+for (let i = 0; i < 12; i++) {
+  const d = new Date(now0.getFullYear(), now0.getMonth() - i, 1);
+  $('month').add(new Option(d.toLocaleString('it-IT', { month: 'long', year: 'numeric' }), `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`));
+}
+$('month').addEventListener('change', () => { loadMonthly(true); });
+
+/* ---------- charts ---------- */
+function niceMax(v) {
+  if (v <= 0) return 10;
+  const p = Math.pow(10, Math.floor(Math.log10(v))), n = v / p;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
+}
+function fmtTick(ts, spanS) {
+  const d = new Date(ts * 1000);
+  return spanS <= 36 * 3600 ? d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+}
+/* series: [{name, color, pts: [[ts, value], ...]}], all on a regular grid of `step` seconds from `since` to `until`. */
+function drawChart(el, { series, since, until, step, stacked }) {
+  const W = Math.max(280, el.clientWidth), H = 210, L = 38, R = 8, T = 10, B = 24;
+  const n = Math.max(2, Math.round((until - since) / step));
+  const grid = Array.from({ length: n }, (_, i) => since + i * step);
+  const vals = series.map(s => { const m = new Map(s.pts.map(p => [p[0], p[1]])); return grid.map(t => m.has(t) ? m.get(t) : null); });
+  if (!vals.some(v => v.some(x => x !== null))) { el.innerHTML = '<div class="empty">Nessuna lettura in questo intervallo.</div>'; return; }
+  const stack = grid.map((_, i) => { let c = 0; return vals.map(v => (c += v[i] ?? 0)); });
+  const top = stacked ? Math.max(...stack.map(s => s[s.length - 1])) : Math.max(...vals.flat().map(x => x ?? 0));
+  const max = niceMax(top * 1.05);
+  const x = i => L + (i / (n - 1)) * (W - L - R), y = v => T + (1 - v / max) * (H - T - B);
+  let g = '';
+  for (let k = 0; k <= 4; k++) {
+    const v = max * k / 4, yy = y(v);
+    g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="var(--line)"/><text x="${L - 6}" y="${yy + 4}" text-anchor="end">${power(v).v}${v >= 1000 ? 'k' : ''}</text>`;
+  }
+  for (let k = 0; k <= 4; k++) { const i = Math.round(k / 4 * (n - 1)); g += `<text x="${x(i)}" y="${H - 6}" text-anchor="${k === 0 ? 'start' : k === 4 ? 'end' : 'middle'}">${fmtTick(grid[i], until - since)}</text>`; }
+  let shapes = '';
+  series.forEach((s, si) => {
+    const top = i => (stacked ? stack[i][si] : (vals[si][i] ?? 0));
+    const base = i => (stacked && si > 0 ? stack[i][si - 1] : 0);
+    if (stacked) {
+      const up = grid.map((_, i) => `${x(i)},${y(top(i))}`), dn = grid.map((_, i) => `${x(i)},${y(base(i))}`).reverse();
+      shapes += `<polygon points="${up.join(' ')} ${dn.join(' ')}" fill="${s.color}" opacity=".8"/>`;
+      shapes += `<polyline points="${up.join(' ')}" fill="none" stroke="${s.color}" stroke-width="1.5" stroke-linejoin="round"/>`;
+    } else {
+      let seg = [];
+      const flush = () => {
+        if (seg.length > 1) {
+          const pts = seg.map(i => `${x(i)},${y(vals[si][i])}`).join(' ');
+          shapes += `<polygon points="${x(seg[0])},${y(0)} ${pts} ${x(seg[seg.length - 1])},${y(0)}" fill="${s.color}" opacity=".16"/><polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+        } else if (seg.length === 1) shapes += `<circle cx="${x(seg[0])}" cy="${y(vals[si][seg[0]])}" r="2.5" fill="${s.color}"/>`;
+        seg = [];
+      };
+      vals[si].forEach((v, i) => { if (v === null) flush(); else seg.push(i); });
+      flush();
+    }
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img">${g}${shapes}<line id="cur" y1="${T}" y2="${H - B}" stroke="var(--muted)" stroke-dasharray="3 3" opacity="0"/></svg><div class="tip hidden"></div>`;
+  const svg = el.querySelector('svg'), cur = svg.querySelector('#cur'), tip = el.querySelector('.tip');
+  const move = e => {
+    const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W;
+    const i = Math.max(0, Math.min(n - 1, Math.round((px - L) / (W - L - R) * (n - 1))));
+    cur.setAttribute('x1', x(i)); cur.setAttribute('x2', x(i)); cur.setAttribute('opacity', 1);
+    const rows = series.map((s, si) => vals[si][i] === null ? '' : `<div><i style="background:${s.color}"></i>${esc(s.name)} <b>${nf(vals[si][i], 1)} W</b></div>`).join('');
+    const tot = stacked && series.length > 1 ? `<div style="margin-top:3px"><b>Totale ${nf(stack[i][series.length - 1], 1)} W</b></div>` : '';
+    tip.innerHTML = `<div style="color:var(--muted);margin-bottom:3px">${new Date(grid[i] * 1000).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>${rows}${tot}`;
+    tip.classList.remove('hidden');
+    const tw = tip.offsetWidth / 2 + 4, left = (x(i) / W) * r.width;
+    tip.style.left = `${Math.max(tw, Math.min(r.width - tw, left))}px`;
   };
-  $("kwh").textContent = kwh(data.total_kwh);
-  $("cost").textContent = price ? "≈ " + (data.total_kwh * price).toFixed(2) + " €" : "";
-  $("hosts").innerHTML = data.hosts.map(h => `<div class="host"><h2><span></span><span>${kwh(h.kwh)} kWh</span></h2>
-    ${liveRow(h)}
-    <div class="row"><span>Potenza media</span><span>${h.avg_w ?? "–"} W</span></div>
-    <div class="row"><span>Ore registrate</span><span>${h.hours_reporting} h</span></div>
-    <div class="row"><span>Di cui CPU / GPU misurati</span><span>${kwh(h.kwh_cpu)} / ${kwh(h.kwh_gpu)} kWh</span></div>
-    <div class="row"><span>Resto del PC (stima) · alimentatore</span><span>${h.base_w} W · ${Math.round(h.eff * 100)}%</span></div>
-    ${h.with_cpu_counter < h.samples ? `<div class="warn muted">${h.samples - h.with_cpu_counter} rilevazioni senza contatore CPU non sono contate.</div>` : ""}
-    <div class="muted">Ultima rilevazione: ${h.last_seen ? new Date(h.last_seen).toLocaleString("it-IT") : "mai"}</div></div>`).join("")
-    || '<div class="muted">Ancora nessun dato: installa il registratore (power/install.sh) su un PC.</div>';
-  document.querySelectorAll(".host h2 span:first-child").forEach((el, i) => el.textContent = data.hosts[i].host);
+  svg.addEventListener('pointermove', move); svg.addEventListener('pointerdown', move);
+  svg.addEventListener('pointerleave', () => { cur.setAttribute('opacity', 0); tip.classList.add('hidden'); });
 }
-async function load() { data = await (await fetch("/api/power/monthly?month=" + $("month").value)).json(); render(); }
-$("month").onchange = load; $("price").oninput = render; load(); setInterval(load, 60000);
+function sparkline(id, values, color) {
+  const svg = $(id), v = values.map(num);
+  const ok = v.filter(x => x !== null);
+  if (ok.length < 2) { svg.innerHTML = ''; return; }
+  const max = Math.max(...ok) || 1, W = 160, H = 56;
+  const pts = v.map((x, i) => x === null ? null : [i / (v.length - 1) * W, H - 4 - (x / max) * (H - 10)]).filter(Boolean);
+  const line = pts.map(p => p.join(',')).join(' ');
+  svg.innerHTML = `<polygon points="0,${H} ${line} ${W},${H}" fill="${color}" opacity=".18"/><polyline points="${line}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
+}
+function barChart(vals) {
+  const max = Math.max(...vals.map(v => v.value ?? 0), 0.001);
+  return `<div class="bars">${vals.map(v => `<div>${v.value === null ? '' : `<span>${kwhF(v.value)}</span>`}<i style="height:${v.value === null ? 3 : Math.max(3, v.value / max * 70)}px;${v.value === null ? 'opacity:.25;' : ''}${v.cur ? 'background:var(--good)' : ''}"></i>${v.label}</div>`).join('')}</div>`;
+}
+
+/* ---------- derived numbers ---------- */
+function derived() {
+  const ov = S.ov, hosts = ov.hosts, net = ov.net.filter(d => !d.hidden);
+  const live = hosts.filter(fresh);
+  const sum = k => { const x = live.map(h => num(h[k])).filter(v => v !== null); return x.length ? x.reduce((a, b) => a + b, 0) : null; };
+  const pcW = live.reduce((a, h) => a + h.wall_w, 0);
+  const onlineNet = net.filter(d => d.online && !d.measured_elsewhere);
+  const netW = onlineNet.reduce((a, d) => a + d.watts, 0);
+  const hoursToday = Math.max(0.05, (ov.now - ov.since) / 3600);
+  const netToday = net.reduce((a, d) => a + (d.online && !d.measured_elsewhere ? d.watts * Math.min(hoursToday, Math.max(0, (ov.now - Math.max(ov.since, d.first_seen)) / 3600)) / 1000 : 0), 0);
+  const pcToday = hosts.reduce((a, h) => a + h.kwh, 0);
+  const everyone = [...live.map(h => ({ name: hostName(h), w: h.wall_w })), ...onlineNet.map(d => ({ name: netName(d), w: d.watts }))].sort((a, b) => b.w - a.w);
+  return { live, pcW, netW, total: pcW + netW, cpu: sum('cpu_w'), gpu: sum('gpu_w'), onlineNet, netToday, pcToday, today: pcToday + netToday, top: everyone[0] || null, everyone };
+}
+function monthEnergy(d) {
+  const m = S.monthly; if (!m) return null;
+  const isCur = m.month === new Date().toISOString().slice(0, 7) || m.month === `${now0.getFullYear()}-${String(now0.getMonth() + 1).padStart(2, '0')}`;
+  const start = new Date(m.month + '-01T00:00:00').getTime() / 1000;
+  const netKwh = isCur ? S.ov.net.filter(x => !x.hidden && x.online && !x.measured_elsewhere)
+    .reduce((a, x) => a + x.watts * Math.max(0, S.ov.now - Math.max(start, x.first_seen)) / 3600 / 1000, 0) : 0;
+  const measured = m.hosts.reduce((a, h) => a + (num(h.kwh_cpu) || 0) + (num(h.kwh_gpu) || 0), 0);
+  return { pc: m.total_kwh, net: netKwh, total: m.total_kwh + netKwh, measured, isCur, start };
+}
+
+/* ---------- home ---------- */
+function renderHero(d) {
+  const ov = S.ov, any = d.live.length > 0;
+  $('live-dot').className = 'dot ' + (any ? 'on' : 'off');
+  setText('online-label', any ? `${d.live.length} PC in linea · ${d.onlineNet.length} altri dispositivi` : 'Nessun PC invia letture');
+  setPower('live-power', 'live-unit', any || d.netW ? d.total : null);
+  setText('live-caption', any ? 'Potenza totale stimata della casa (PC misurati + dispositivi stimati)' : 'In attesa delle letture dei PC.');
+  setText('live-cpu', d.cpu === null ? '—' : `${nf(d.cpu, 1)} W`); setText('live-gpu', d.gpu === null ? '—' : `${nf(d.gpu, 1)} W`);
+  setPower('n-pc', 'n-pc-u', any ? d.pcW : null); setText('n-pc-s', any ? `${d.live.length} in linea` : 'offline');
+  setPower('n-net', 'n-net-u', d.onlineNet.length ? d.netW : null); setText('n-net-s', `${d.onlineNet.length} attivi · stima`);
+  if (d.top) { setPower('n-top', 'n-top-u', d.top.w); setText('n-top-s', d.top.name); } else { setText('n-top', '—'); setText('n-top-s', ''); }
+  setText('n-cost', d.total ? nf(d.total / 1000 * price(), 3) : '—'); setText('n-cost-s', `${money(d.total / 1000 * price() * 24)} al giorno`);
+  $('flow-pc').classList.toggle('idle', !any); $('flow-net').classList.toggle('idle', !d.netW);
+  $('flow-top').classList.toggle('idle', !d.top); $('flow-cost').classList.toggle('idle', !d.total);
+}
+function renderCards(d) {
+  setText('today-value', kwhF(d.today)); setText('today-note', `PC ${kwhF(d.pcToday)} + altri ~${kwhF(d.netToday)} kWh`);
+  if (S.day) sparkline('today-chart', S.day.total.map(p => p.wall), 'var(--good)');
+  const e = monthEnergy(d), m = S.monthly;
+  if (e) {
+    const [y, mo] = m.month.split('-').map(Number);
+    setText('energy-period', new Date(y, mo - 1, 1).toLocaleString('it-IT', { month: 'long', year: 'numeric' }));
+    setText('energy-value', kwhF(e.total));
+    const days = new Date(y, mo, 0).getDate(), elapsed = Math.max(0.5, (S.ov.now - e.start) / 86400);
+    setText('energy-note', e.isCur && elapsed < days ? `Previsione a fine mese ~${kwhF(e.total / elapsed * days)} kWh` : `PC ${kwhF(e.pc)} + altri ~${kwhF(e.net)} kWh`);
+    setText('cost-period', new Date(y, mo - 1, 1).toLocaleString('it-IT', { month: 'long' }));
+    setText('cost-value', money(e.total * price()));
+    setText('cost-note', e.isCur && elapsed < days ? `Previsione ~${money(e.total / elapsed * days * price())}` : `a ${nf(price() * 100, 0)} c€/kWh`);
+    setText('co2-value', nf(e.total * co2f(), 1)); setText('measured-period', new Date(y, mo - 1, 1).toLocaleString('it-IT', { month: 'long' }));
+    setText('measured-value', kwhF(e.measured));
+    sparkline('energy-chart', S.history.map(h => h.energy), 'var(--accent)');
+    setText('history-first', S.history.length ? shortMonth(S.history[0].month) : ''); setText('history-last', S.history.length ? shortMonth(S.history[S.history.length - 1].month) : '');
+  }
+}
+function devCard(href, ico, name, subHtml, w, kwhNote, share, color) {
+  const p = power(w);
+  return `<button class="dev" type="button" data-go="${esc(href)}"><span class="ico" style="${color ? `color:${color};background:color-mix(in srgb, ${color} 15%, transparent)` : ''}">${ico}</span>
+    <span class="main"><span class="name">${esc(name)}</span><span class="sub">${subHtml}</span><span class="bar"><i style="width:${Math.max(2, Math.min(100, share))}%;${color ? `background:${color}` : ''}"></i></span></span>
+    <span class="val">${p.v} ${p.u}<small>${kwhNote}</small></span></button>`;
+}
+function renderDevices(d) {
+  const ov = S.ov, maxW = Math.max(1, ...ov.hosts.map(h => h.wall_w || 0), ...ov.net.map(x => x.watts));
+  const hosts = [...ov.hosts].sort((a, b) => (fresh(b) - fresh(a)) || ((b.wall_w || 0) - (a.wall_w || 0)));
+  $('device-list').innerHTML = hosts.length ? hosts.map((h, i) => {
+    const f = fresh(h);
+    const sub = `<span class="dot ${f ? 'on' : 'off'}" style="width:7px;height:7px"></span>${f ? (h.ac === 0 ? 'a batteria' : 'in linea') : `<span class="tag">offline · ${ago(h.age_s ?? 0)}</span>`}`;
+    return devCard('#/pc/' + encodeURIComponent(h.host), icon(hostIcon(h)), hostName(h), sub, f ? h.wall_w : null, `${kwhF(h.kwh)} kWh oggi`, f ? (h.wall_w / maxW * 100) : 0, COLORS[i % 6]);
+  }).join('') : '<div class="empty">Nessun PC ha ancora inviato letture. Installa il collector con power/install.sh.</div>';
+  setText('device-count', `${d.live.length}/${ov.hosts.length} PC attivi`);
+
+  const net = ov.net.filter(x => S.showHidden || !x.hidden).sort((a, b) => (b.online - a.online) || (b.watts - a.watts));
+  const hiddenN = ov.net.filter(x => x.hidden).length;
+  setText('net-caption', `· ${d.onlineNet.length} attivi, ~${nf(d.netW, 0)} W`);
+  $('net-list').innerHTML = net.length ? net.map(x => {
+    const sub = `<span class="dot ${x.online ? 'on' : 'off'}" style="width:7px;height:7px"></span>${esc(KINDS[x.kind] || x.kind)} · ${esc(x.ip || '')}${x.hidden ? ' · nascosto' : ''}`;
+    return devCard('#/net/' + encodeURIComponent(x.mac), icon(x.kind), netName(x), sub, x.online ? x.watts : 0, x.measured_elsewhere ? 'misurato come PC' : x.watts_custom ? 'valore tuo' : 'stima', x.online ? x.watts / maxW * 100 : 0, null);
+  }).join('') : '<div class="empty">Nessuna scansione della rete ancora: avvia power/netscan.py (o il timer systemd).</div>';
+  const more = $('net-more');
+  more.classList.toggle('hidden', !hiddenN);
+  more.textContent = S.showHidden ? 'Nascondi quelli esclusi' : `Mostra ${hiddenN} dispositivi esclusi`;
+}
+function renderInsights(d) {
+  const out = [], ov = S.ov;
+  const base = ov.hosts.filter(h => h.floor_w !== null && h.age_s !== null && h.age_s < 86400 * 2).reduce((a, h) => a + h.floor_w, 0) + d.netW;
+  if (base > 0) out.push({ t: 'Carico di base', p: `Almeno ${nf(base, 0)} W restano sempre accesi: ${nf(base * 8.76, 0)} kWh e circa ${money(base * 8.76 * price())} all'anno.` });
+  if (d.everyone.length > 1 && d.total > 0) out.push({ t: `${d.everyone[0].name} pesa di più`, p: `${nf(d.everyone[0].w / d.total * 100, 0)}% della potenza di casa in questo momento (${nf(d.everyone[0].w, 0)} W).` });
+  const e = monthEnergy(d);
+  if (e && e.isCur) {
+    const [y, mo] = S.monthly.month.split('-').map(Number), days = new Date(y, mo, 0).getDate(), el = Math.max(0.5, (S.ov.now - e.start) / 86400);
+    out.push({ t: 'Previsione del mese', p: `A questo ritmo finirai a ~${kwhF(e.total / el * days)} kWh, ${money(e.total / el * days * price())}.` });
+  }
+  if (d.total > 0) out.push({ t: 'Se restasse così', p: `${money(d.total / 1000 * price() * 24)} al giorno, ${money(d.total / 1000 * price() * 24 * 365)} all'anno.` });
+  const gone = ov.hosts.filter(h => h.age_s !== null && h.age_s > 900 && h.age_s < 7 * 86400);
+  if (gone.length) out.push({ warn: 1, t: `${gone.length} PC senza letture`, p: `${gone.map(hostName).join(', ')}: spenti, in sospensione o collector fermo.` });
+  const idle = ov.net.filter(x => !x.hidden && !x.online && x.last_seen && ov.now - x.last_seen < 7 * 86400).length;
+  if (idle) out.push({ t: 'Dispositivi spenti', p: `${idle} dispositivi visti negli ultimi 7 giorni sono ora offline e non contano nel totale.` });
+  $('insight-list').innerHTML = out.map(i => `<div class="insight ${i.warn ? 'warn' : ''}"><span class="ico">${i.warn ? '!' : '✓'}</span><div><h3>${esc(i.t)}</h3><p>${esc(i.p)}</p></div></div>`).join('') || '<div class="empty">Servono più letture.</div>';
+}
+function rangeChips(el, cur, onPick) {
+  const R = [[6, '6 h'], [24, '24 h'], [168, '7 g'], [720, '30 g']];
+  el.innerHTML = R.map(([h, l]) => `<button class="chip" type="button" aria-pressed="${h === cur}" data-h="${h}">${l}</button>`).join('');
+  el.onclick = e => { const b = e.target.closest('[data-h]'); if (b) onPick(Number(b.dataset.h)); };
+}
+async function renderHomeChart() {
+  rangeChips($('home-ranges'), S.homeRange, h => { S.homeRange = h; renderHomeChart(); });
+  const until = Math.floor(Date.now() / 1000), since = until - S.homeRange * 3600;
+  try {
+    const r = await api(`/api/power/series?since=${since}&until=${until}&buckets=96`);
+    const names = Object.keys(r.hosts), byName = Object.fromEntries(S.ov.hosts.map(h => [h.host, h]));
+    const series = names.map((h, i) => ({ name: byName[h] ? hostName(byName[h]) : h, color: COLORS[i % 6], pts: r.hosts[h].map(p => [p.ts, p.wall]) }));
+    drawChart($('home-chart'), { series, since: r.since, until: r.until, step: r.step_s, stacked: true });
+    $('home-legend').innerHTML = series.map(s => `<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('');
+  } catch (e) { $('home-chart').innerHTML = `<div class="empty">Grafico non disponibile (${esc(e.message)})</div>`; }
+}
+function renderAll() {
+  if (!S.ov) return;
+  if (isDetail()) { renderDetail(); return; }
+  let d;
+  try { d = derived(); } catch (e) { showError(`Errore nei dati: ${e.message}`); return; }
+  // each block on its own: an error in one must not leave the others on their placeholder
+  for (const fn of [renderHero, renderCards, renderDevices, renderInsights]) {
+    try { fn(d); } catch (e) { console.error(e); showError(`Errore in ${fn.name}: ${e.message}`); }
+  }
+}
+window.addEventListener('error', e => showError(`Errore della pagina: ${e.message} (riga ${e.lineno})`));
+window.addEventListener('unhandledrejection', e => showError(`Errore: ${e.reason && e.reason.message || e.reason}`));
+
+/* ---------- detail ---------- */
+async function renderDetail() {
+  const [, kind, id] = location.hash.match(/^#\/(pc|net)\/(.+)$/) || [];
+  const box = $('view-detail');
+  const key = decodeURIComponent(id || '');
+  const back = '<button class="back" type="button" data-go="#/"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5-7 7 7 7"/></svg>Home</button>';
+  if (kind === 'pc') {
+    const h = S.ov.hosts.find(x => x.host === key);
+    if (!h) { box.innerHTML = back + '<div class="empty">PC non trovato.</div>'; return; }
+    const f = fresh(h), idx = S.ov.hosts.indexOf(h), color = COLORS[idx % 6], p = power(f ? h.wall_w : null);
+    const keep = box.dataset.key === 'pc/' + key;
+    if (!keep) {
+      box.dataset.key = 'pc/' + key;
+      box.innerHTML = `<div class="detail-hero">${back}
+        <div class="detail-title"><span class="ico">${icon(hostIcon(h))}</span><div><h2>${esc(hostName(h))}</h2><p><span class="dot ${f ? 'on' : 'off'}" style="display:inline-block;margin-right:6px"></span><span id="d-status"></span></p></div></div>
+        <p class="total" style="margin-top:12px"><span id="d-live">${p.v}</span><small id="d-unit">${p.u}</small></p>
+        <p class="hero-sub" id="d-split"></p></div>
+        <input type="hidden" id="d-key" value="${esc(key)}">
+        <section style="margin-top:18px"><div class="section-head"><h2>Andamento</h2><div class="chips" id="d-ranges"></div></div>
+        <div class="card chart-card"><div class="chart" id="d-chart"></div><div class="legend" id="d-legend"></div></div></section>
+        <div class="stats" id="d-stats"></div>
+        <section><div class="section-head"><h2>Ultimi mesi</h2></div><div class="card" id="d-months"></div></section>
+        <section><div class="section-head"><div><h2>Calibrazione</h2><p>Per avvicinare la stima al consumo reale alla presa</p></div></div>
+        <div class="card"><div class="row"><h3>Nome</h3><input type="text" id="e-alias" placeholder="${esc(h.host.split('.')[0])}" value="${esc(h.alias || '')}" aria-label="Nome del PC"></div>
+        <div class="row"><div><h3>Resto del PC</h3><p>Scheda, RAM, dischi, ventole (W non misurati)</p></div><label class="field"><input type="number" id="e-base" min="0" max="1000" step="0.5" value="${h.base_w}"> W</label></div>
+        <div class="row"><div><h3>Efficienza alimentatore</h3><p>0,85 = perde il 15%</p></div><label class="field"><input type="number" id="e-eff" min="0.3" max="1" step="0.01" value="${h.eff}"></label></div>
+        <div class="row"><span id="e-msg"></span><button class="btn" type="button" id="e-save">Salva</button></div></div></section>`;
+      if (S.flash) { $('e-msg').innerHTML = '<span class="saved">Salvato ✓</span>'; S.flash = false; }
+      $('e-save').onclick = async () => {
+        try { await api('/api/power/host/' + encodeURIComponent(h.host), { alias: $('e-alias').value.trim() || null, base_w: Number($('e-base').value), eff: Number($('e-eff').value) });
+          $('e-msg').innerHTML = '<span class="saved">Salvato ✓</span>'; box.dataset.key = ''; S.flash = true; await loadOverview(); loadMonthly(); }
+        catch (e) { $('e-msg').textContent = 'Errore: ' + e.message; }
+      };
+    }
+    setText('d-status', f ? (h.ac === 0 ? 'in linea · a batteria' : 'in linea') : `offline · ultima lettura ${ago(h.age_s ?? 0)}`);
+    setText('d-live', p.v); setText('d-unit', p.u);
+    setText('d-split', h.sys_w !== null ? `Intero sistema misurato: ${nf(h.sys_w, 1)} W (prima delle perdite)` : f ? `CPU ${nf(h.cpu_w, 1)} W · GPU ${h.gpu_w === null ? 'n/d' : nf(h.gpu_w, 1) + ' W'} · resto stimato ${nf(h.base_w, 0)} W` : '');
+    rangeChips($('d-ranges'), S.detailRange, v => { S.detailRange = v; renderDetail(); });
+    const until = Math.floor(Date.now() / 1000), since = until - S.detailRange * 3600;
+    try {
+      const r = await api(`/api/power/series?since=${since}&until=${until}&buckets=120`);
+      const pts = r.hosts[h.host] || [];
+      let series;
+      if (pts.some(q => q.cpu !== null)) {
+        series = [{ name: 'CPU', color: 'var(--c1)', pts: pts.map(q => [q.ts, q.cpu ?? 0]) }, { name: 'GPU', color: 'var(--c3)', pts: pts.map(q => [q.ts, q.gpu ?? 0]) },
+          { name: 'Resto + perdite (stima)', color: 'var(--c6)', pts: pts.map(q => [q.ts, Math.max(0, q.wall - (q.cpu ?? 0) - (q.gpu ?? 0))]) }];
+      } else series = [{ name: 'Intero sistema', color: color, pts: pts.map(q => [q.ts, q.wall]) }];
+      drawChart($('d-chart'), { series, since: r.since, until: r.until, step: r.step_s, stacked: series.length > 1 });
+      $('d-legend').innerHTML = series.map(s => `<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('');
+      const ws = pts.map(q => q.wall), kwh = ws.reduce((a, w) => a + w * r.step_s, 0) / 3.6e6;
+      const avg = ws.length ? ws.reduce((a, b) => a + b, 0) / ws.length : null, tot = r.total.map(q => q.wall), share = tot.length ? ws.reduce((a, b) => a + b, 0) / tot.reduce((a, b) => a + b, 0) : null;
+      $('d-stats').innerHTML = [['Media', nf(avg, 1), 'W'], ['Picco', nf(ws.length ? Math.max(...ws) : null, 1), 'W'], ['Minimo', nf(ws.length ? Math.min(...ws) : null, 1), 'W'],
+        ['Energia', kwhF(kwh), 'kWh'], ['Costo', money(kwh * price()), ''], ['CO₂', nf(kwh * co2f(), 2), 'kg'], ['Peso sul totale PC', share === null ? '—' : nf(share * 100, 0), '%'], ['Oggi', kwhF(h.kwh), 'kWh']]
+        .map(([l, v, u]) => `<div class="stat"><span>${l}</span><b>${v}<small>${u}</small></b></div>`).join('');
+    } catch (e) { $('d-chart').innerHTML = `<div class="empty">Grafico non disponibile (${esc(e.message)})</div>`; }
+    const hist = await Promise.all(S.history.map(async x => { try { const m = await api(`/api/power/monthly?month=${x.month}`); const row = m.hosts.find(q => q.host === h.host); return { label: shortMonth(x.month), value: row && row.with_cpu_counter ? row.kwh : null, cur: x.month === S.monthly?.month }; } catch (_) { return { label: shortMonth(x.month), value: null }; } }));
+    $('d-months').innerHTML = barChart(hist) + '<p class="eyebrow" style="margin-top:6px">kWh per mese, stimati dalle letture di questo PC</p>';
+  } else if (kind === 'net') {
+    const x = S.ov.net.find(q => q.mac === key);
+    if (!x) { box.innerHTML = back + '<div class="empty">Dispositivo non trovato.</div>'; return; }
+    if (box.dataset.key === 'net/' + key) return;  // keep what the user is typing: re-render only after a save or navigation
+    box.dataset.key = 'net/' + key;
+    const p = power(x.online ? x.watts : 0), perMonth = x.watts * 24 * 30 / 1000;
+    const typical = S.ov.kind_w[x.kind] ?? 5;
+    box.innerHTML = `<div class="detail-hero">${back}
+      <div class="detail-title"><span class="ico">${icon(x.kind)}</span><div><h2>${esc(netName(x))}</h2><p><span class="dot ${x.online ? 'on' : 'off'}" style="display:inline-block;margin-right:6px"></span>${x.online ? 'in rete adesso' : 'non visto da ' + ago(S.ov.now - x.last_seen).replace(' fa', '')}</p></div></div>
+      <p class="total" style="margin-top:12px">${p.v}<small>${p.u} stimati</small></p>
+      <p class="hero-sub">${x.measured_elsewhere ? 'È un PC con collector: viene misurato, non stimato.' : 'Nessun contatore: valore tipico per ' + esc((KINDS[x.kind] || x.kind).toLowerCase()) + ', modificabile qui sotto.'}</p></div>
+      <div class="stats">
+        <div class="stat"><span>Se sempre acceso</span><b>${kwhF(perMonth)}<small>kWh/mese</small></b></div>
+        <div class="stat"><span>Costo mensile</span><b>${money(perMonth * price())}</b></div>
+        <div class="stat"><span>Costo annuo</span><b>${money(perMonth * 12 * price())}</b></div>
+        <div class="stat"><span>CO₂ annua</span><b>${nf(perMonth * 12 * co2f(), 1)}<small>kg</small></b></div></div>
+      <section><div class="section-head"><h2>Dettagli</h2></div><div class="card">
+        <div class="row"><h3>Indirizzo IP</h3><span>${esc(x.ip || '—')}</span></div>
+        <div class="row"><h3>MAC</h3><span style="font-family:monospace">${esc(x.mac)}</span></div>
+        <div class="row"><h3>Nome in rete</h3><span>${esc(x.hostname || '—')}</span></div>
+        <div class="row"><h3>Primo avvistamento</h3><span>${new Date(x.first_seen * 1000).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</span></div>
+        <div class="row"><h3>Ultimo avvistamento</h3><span>${new Date(x.last_seen * 1000).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span></div></div></section>
+      <section><div class="section-head"><div><h2>Modifica</h2><p>Un MAC casuale (telefoni) può cambiare e comparire come nuovo dispositivo</p></div></div><div class="card">
+        <div class="row"><h3>Nome</h3><input type="text" id="e-alias" value="${esc(x.alias || '')}" placeholder="${esc(netName(x))}" aria-label="Nome del dispositivo"></div>
+        <div class="row"><h3>Tipo</h3><select class="f" id="e-kind" style="width:auto" aria-label="Tipo di dispositivo">${Object.entries(KINDS).map(([k, l]) => `<option value="${k}" ${k === x.kind ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="row"><div><h3>Potenza media</h3><p>Vuoto = tipico del tipo (${typical} W)</p></div><label class="field"><input type="number" id="e-w" min="0" max="5000" step="0.5" value="${x.watts_custom ? x.watts : ''}" placeholder="${typical}"> W</label></div>
+        <div class="row"><div><h3>Escludi dal totale</h3><p>Per dispositivi che non sono tuoi (ospiti, vicini)</p></div><button class="chip" id="e-hide" type="button" aria-pressed="${x.hidden}">${x.hidden ? 'Escluso' : 'Incluso'}</button></div>
+        <div class="row"><span id="e-msg"></span><button class="btn" type="button" id="e-save">Salva</button></div></div></section>`;
+    if (S.flash) { $('e-msg').innerHTML = '<span class="saved">Salvato ✓</span>'; S.flash = false; }
+    $('e-hide').onclick = e => { const b = e.currentTarget; const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on); b.textContent = on ? 'Escluso' : 'Incluso'; };
+    $('e-save').onclick = async () => {
+      const w = $('e-w').value.trim();
+      try { await api('/api/power/netdev/' + encodeURIComponent(x.mac), { alias: $('e-alias').value.trim() || null, kind: $('e-kind').value, watts: w === '' ? null : Number(w), hidden: $('e-hide').getAttribute('aria-pressed') === 'true' });
+        box.dataset.key = ''; S.flash = true; await loadOverview(); }
+      catch (e) { $('e-msg').textContent = 'Errore: ' + e.message; }
+    };
+  }
+}
+
+/* ---------- routing + loading ---------- */
+function route() {
+  const detail = isDetail();
+  $('view-home').classList.toggle('hidden', detail); $('view-detail').classList.toggle('hidden', !detail);
+  document.querySelector('.bottom-nav').querySelectorAll('.nav-button').forEach(b => b.classList.toggle('active', !detail && b.dataset.target === 'top'));
+  if (detail) { $('view-detail').innerHTML = ''; $('view-detail').dataset.key = ''; window.scrollTo(0, 0); renderDetail(); } else { renderAll(); renderHomeChart(); }
+}
+window.addEventListener('hashchange', route);
+document.addEventListener('click', e => {
+  const go = e.target.closest('[data-go]'); if (go) { location.hash = go.dataset.go; return; }
+  const nav = e.target.closest('.nav-button');
+  if (nav) {
+    if (isDetail()) { history.pushState(null, '', location.pathname); route(); }
+    const t = $(nav.dataset.target); t && t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.querySelectorAll('.nav-button').forEach(b => b.classList.toggle('active', b === nav));
+  }
+});
+$('net-more').onclick = () => { S.showHidden = !S.showHidden; renderAll(); };
+let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (isDetail()) renderDetail(); else renderHomeChart(); }, 200); });
+
+function showError(msg) { const el = $('load-error'); el.textContent = msg; el.style.display = msg ? 'block' : 'none'; }
+async function loadOverview() {
+  try { S.ov = await api(`/api/power/overview?since=${midnight()}`); showError(''); renderAll(); }
+  catch (e) { showError(`Non riesco a caricare i consumi (${e.message}). Riprovo tra poco.`); }
+}
+async function loadDay() {
+  try { const until = Math.floor(Date.now() / 1000); S.day = await api(`/api/power/series?since=${until - 86400}&until=${until}&buckets=96`); renderAll(); } catch (_) {}
+}
+async function loadMonthly(withHistory) {
+  const month = $('month').value;
+  try {
+    S.monthly = await api(`/api/power/monthly?month=${month}`);
+    if (withHistory || !S.history.length) {
+      const months = Array.from({ length: MONTHS_BACK }, (_, i) => monthShift(month, i - MONTHS_BACK + 1));
+      S.history = await Promise.all(months.map(async m => { try { const r = await api(`/api/power/monthly?month=${m}`); return { month: m, energy: r.hosts.some(h => h.with_cpu_counter > 0) ? r.total_kwh : null }; } catch (_) { return { month: m, energy: null }; } }));
+    }
+    renderAll();
+  } catch (e) { showError(`Non riesco a caricare lo storico mensile (${e.message}).`); }
+}
+(async () => {
+  await loadOverview();
+  route();
+  loadDay(); loadMonthly(true);
+  setInterval(loadOverview, 15000);
+  setInterval(() => { loadDay(); loadMonthly(); if (!isDetail()) renderHomeChart(); }, 120000);
+})();
 </script>
 </body>
 </html>
