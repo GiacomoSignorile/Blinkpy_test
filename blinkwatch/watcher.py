@@ -192,6 +192,9 @@ def record_camera_status(blink, db):
         db.execute("INSERT INTO camera_status (camera, data, updated_at) VALUES (?,?,?) "
                    "ON CONFLICT(camera) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at",
                    (name.strip(), json.dumps(data), now))
+        if data.get("battery_voltage") is not None:
+            db.execute("INSERT OR IGNORE INTO camera_battery (camera, ts, voltage, battery, wifi, temp) VALUES (?,?,?,?,?,?)",
+                       (name.strip(), now, data["battery_voltage"], data.get("battery"), data.get("wifi_strength"), data.get("temperature_c")))
     db.commit()
 
 

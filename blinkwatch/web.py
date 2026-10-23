@@ -184,6 +184,22 @@ def cameras(tz: int = 0):
             "last_processed": processed}
 
 
+@app.get("/api/battery")
+def battery(hours: int = 168):
+    """Battery voltage per camera, averaged per hour over the last `hours`, as recorded by the watcher at every loop."""
+    since = (datetime.now(timezone.utc) - timedelta(hours=min(max(hours, 1), 24 * 90))).isoformat()
+    db = store.connect()
+    try:
+        rows = db.execute("SELECT camera, substr(ts, 1, 13) AS h, AVG(voltage) AS v, MIN(ts) AS first FROM camera_battery "
+                          "WHERE ts >= ? GROUP BY camera, h ORDER BY camera, h", (since,)).fetchall()
+    finally:
+        db.close()
+    out = {}
+    for r in rows:
+        out.setdefault(r["camera"], []).append({"at": r["h"] + ":00:00+00:00", "v": round(r["v"], 1)})
+    return {"cameras": out}
+
+
 @app.get("/api/animals")
 def animals(tz: int = 0):
     """Each pet: when and where it was last seen, sightings today and over 7 days, and a recent crop as its picture."""

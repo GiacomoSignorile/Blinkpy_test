@@ -36,6 +36,10 @@ CREATE TABLE IF NOT EXISTS clips (
     processed_at TEXT,
     identities TEXT DEFAULT ''         -- JSON: who/what was recognised, see identify.summarize
 );
+CREATE TABLE IF NOT EXISTS camera_battery (  -- one row per camera per watcher loop, to see how fast a battery drains
+    camera TEXT, ts TEXT, voltage INTEGER, battery TEXT, wifi INTEGER, temp REAL,
+    PRIMARY KEY (camera, ts)
+);
 CREATE TABLE IF NOT EXISTS camera_status (
     camera TEXT PRIMARY KEY,           -- name as Blink reports it, stripped
     data TEXT,                         -- JSON: battery, wifi, temperature... (see watcher.record_camera_status)

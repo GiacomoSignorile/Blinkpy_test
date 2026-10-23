@@ -82,6 +82,9 @@
   .tag.good { background: var(--good-soft); color: var(--good); border-color: transparent; }
   .signal { display: inline-flex; align-items: end; gap: 2px; height: 12px; vertical-align: -1px; margin-right: 4px; }
   .signal i { width: 3px; background: currentColor; border-radius: 1px; opacity: .25; } .signal i.on { opacity: 1; }
+  .batt { margin-top: 12px; }
+  .batt svg { width: 100%; height: 46px; display: block; }
+  .batt .row { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
   .link { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); text-decoration: none; color: var(--accent); font-weight: 600; font-size: 14px; }
   .mods { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
   .mod { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
@@ -172,6 +175,26 @@ function blinkTags(c) {
   if (b.motion_enabled === false) out.push('<span class="tag warn">Movimento disattivato</span>');
   return out.join('');
 }
+let BATT = {};
+// voltage history: needs a few hours of readings; the slope is a straight-line fit, so it is only shown over 12 h or more
+function battChart(c) {
+  const pts = BATT[c.camera.trim()] || [];
+  if (!c.blink || c.blink.battery_voltage == null) return '';
+  if (pts.length < 2) return '<div class="batt"><div class="row"><span>Tensione batteria</span><span>storico in raccolta…</span></div></div>';
+  const t = pts.map(p => new Date(p.at).getTime()), v = pts.map(p => p.v);
+  const t0 = t[0], span = t[t.length - 1] - t0 || 1, lo = Math.min(...v), hi = Math.max(...v), pad = Math.max(1, (hi - lo) * .15);
+  const x = i => (t[i] - t0) / span * 300, y = val => 42 - (val - (lo - pad)) / (hi - lo + 2 * pad) * 38;
+  const line = v.map((val, i) => `${x(i).toFixed(1)},${y(val).toFixed(1)}`).join(' ');
+  let trend = '';
+  if (span >= 12 * 3600e3) {
+    const n = v.length, mt = t.reduce((a, b) => a + b, 0) / n, mv = v.reduce((a, b) => a + b, 0) / n;
+    const slope = t.reduce((a, ti, i) => a + (ti - mt) * (v[i] - mv), 0) / (t.reduce((a, ti) => a + (ti - mt) ** 2, 0) || 1) * 86400e3 / 100;  // V per day
+    trend = Math.abs(slope) < 0.005 ? 'stabile' : `${slope > 0 ? '+' : '−'}${Math.abs(slope).toLocaleString('it-IT', { maximumFractionDigits: 3 })} V/giorno`;
+  }
+  const days = Math.max(1, Math.round(span / 86400e3 * 10) / 10);
+  return `<div class="batt"><div class="row"><span>Tensione · ultimi ${days.toLocaleString('it-IT')} g</span><span>${volts(v[0])} → ${volts(v[v.length - 1])}${trend ? ' · ' + trend : ''}</span></div>
+    <svg viewBox="0 0 300 46" preserveAspectRatio="none" role="img" aria-label="Andamento della tensione della batteria"><polyline points="${line}" fill="none" stroke="${c.blink && String(c.blink.battery).toLowerCase() === 'low' ? 'var(--bad)' : 'var(--good)'}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg></div>`;
+}
 function card(c) {
   const maxD = Math.max(1, ...c.days), maxH = Math.max(1, ...c.hours);
   const today = new Date(); const dow = i => new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6 + i).toLocaleDateString('it-IT', { weekday: 'narrow' });
@@ -187,6 +210,7 @@ function card(c) {
       <div class="label"><span>Ore più attive</span></div>
       <div class="hours" role="img" aria-label="Attività per ora del giorno">${c.hours.map((n, h) => `<i title="${h}:00 · ${n} clip" style="opacity:${n ? (.15 + .85 * n / maxH).toFixed(2) : .07}"></i>`).join('')}</div>
       <div class="hours-axis"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
+      ${battChart(c)}
       <div class="tags">${blinkTags(c)}${cats}${who}</div>
       <a class="link" href="/?camera=${encodeURIComponent(c.camera)}">Vedi gli eventi <span>→</span></a></div></article>`;
 }
@@ -209,7 +233,9 @@ async function load() {
   try {
     const r = await fetch('/api/cameras?tz=' + (-new Date().getTimezoneOffset()), { cache: 'no-store' });
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    render(await r.json()); $('error').hidden = true;
+    const data = await r.json();
+    try { const b = await fetch('/api/battery?hours=720', { cache: 'no-store' }); BATT = b.ok ? (await b.json()).cameras : {}; } catch (_) { BATT = {}; }
+    render(data); $('error').hidden = true;
   } catch (e) { $('error').textContent = `Non riesco a caricare lo stato (${e.message}).`; $('error').hidden = false; }
 }
 addEventListener('error', e => { $('error').textContent = `Errore della pagina: ${e.message}`; $('error').hidden = false; });
