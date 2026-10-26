@@ -75,3 +75,12 @@ NOTIFY_TAGS = {"persona": "bust_in_silhouette", "veicolo": "car", "animale": "pa
 # Person identification model (CLIP-L fine-tuned); absent file = fall back to the small DINOv2 classifier
 PERSON_MODEL = Path(os.environ.get("PERSON_MODEL", DATA_DIR / "models" / "persona_clipL_v1.pt"))
 TORCH_THREADS = int(os.environ.get("TORCH_THREADS", 6))
+
+# IP camera (an Android phone running "Android IP Camera"): see blinkwatch/ipcam.py. Empty IPCAM_URL = service idle.
+IPCAM_URL = os.environ.get("IPCAM_URL", "").rstrip("/")  # e.g. https://192.168.1.30:4444
+IPCAM_USER = os.environ.get("IPCAM_USER", "")
+IPCAM_PASS = os.environ.get("IPCAM_PASS", "")
+IPCAM_NAME = os.environ.get("IPCAM_NAME", "Telecamera IP")
+IPCAM_EXPOSURE = int(os.environ.get("IPCAM_EXPOSURE", 10))  # -10..10; +10 = night
+IPCAM_TORCH = os.environ.get("IPCAM_TORCH", "1") == "1"  # light the torch only while there is motion
+IPCAM_ROTATE = int(os.environ.get("IPCAM_ROTATE", 0))  # software rotation of the clip: 0/90/180/270

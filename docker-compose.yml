@@ -21,6 +21,11 @@ services:
     <<: *common
     command: python -m blinkwatch.watcher
 
+  # Phone used as an IP camera (see blinkwatch/ipcam.py); needs IPCAM_* in .env. Clips go through the watcher like Blink clips.
+  ipcam:
+    <<: *common
+    command: python -m blinkwatch.ipcam
+
   web:
     <<: *common
     command: uvicorn blinkwatch.web:app --host 0.0.0.0 --port 8765
