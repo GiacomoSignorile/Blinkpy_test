@@ -3,30 +3,37 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#dfeaf3">
+<meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141415" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/pwa/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Blinkwatch">
+<script>if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));</script>
 <title>Telecamere · Blinkwatch</title>
 <style>
   :root {
     color-scheme: light;
     --bg: #eef3f7; --surface: #fff; --surface-2: #f5f8fb; --ink: #16222b; --muted: #6d7f8b; --line: #e1e9ef;
-    --accent: #2f6fe4; --accent-soft: #e6eefc; --good: #2fa874; --good-soft: #e3f5ec; --warn: #e8913c; --warn-soft: #fff0e0; --bad: #d9534f; --bad-soft: #fde8e7;
-    --persona: #d9534f; --veicolo: #2f6fe4; --animale: #2fa874;
+    --accent: #6d28d9; --accent-soft: #f1eafe; --good: #2fa874; --good-soft: #e3f5ec; --warn: #e8913c; --warn-soft: #fff0e0; --bad: #d9534f; --bad-soft: #fde8e7;
+    --persona: #d9534f; --veicolo: #6d28d9; --animale: #2fa874;
     --sky-top: #cfe3f5; --sky-bot: #eef3f7; --shadow: 0 10px 30px rgba(30, 60, 90, .08); --radius: 20px;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
       --bg: #0d1318; --surface: #161e25; --surface-2: #1c262f; --ink: #e8eef2; --muted: #8b9ba6; --line: #26323c;
-      --accent: #5b9bff; --accent-soft: #1b2b45; --good: #43d196; --good-soft: #14302a; --warn: #f3a65a; --warn-soft: #3a2a17; --bad: #ef7773; --bad-soft: #3a1d1d;
-      --persona: #ef7773; --veicolo: #5b9bff; --animale: #43d196;
+      --accent: #c4b5fd; --accent-soft: #302044; --good: #43d196; --good-soft: #14302a; --warn: #f3a65a; --warn-soft: #3a2a17; --bad: #ef7773; --bad-soft: #3a1d1d;
+      --persona: #ef7773; --veicolo: #c4b5fd; --animale: #43d196;
       --sky-top: #0a1626; --sky-bot: #0d1318; --shadow: 0 10px 30px rgba(0, 0, 0, .35);
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
     --bg: #0d1318; --surface: #161e25; --surface-2: #1c262f; --ink: #e8eef2; --muted: #8b9ba6; --line: #26323c;
-    --accent: #5b9bff; --accent-soft: #1b2b45; --good: #43d196; --good-soft: #14302a; --warn: #f3a65a; --warn-soft: #3a2a17; --bad: #ef7773; --bad-soft: #3a1d1d;
-    --persona: #ef7773; --veicolo: #5b9bff; --animale: #43d196;
+    --accent: #c4b5fd; --accent-soft: #302044; --good: #43d196; --good-soft: #14302a; --warn: #f3a65a; --warn-soft: #3a2a17; --bad: #ef7773; --bad-soft: #3a1d1d;
+    --persona: #ef7773; --veicolo: #c4b5fd; --animale: #43d196;
     --sky-top: #0a1626; --sky-bot: #0d1318; --shadow: 0 10px 30px rgba(0, 0, 0, .35);
   }
   * { box-sizing: border-box; }
@@ -40,42 +47,42 @@
   [hidden] { display: none !important; }
   .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 18px 0 8px; }
   .eyebrow { font-size: 12px; color: var(--muted); }
-  .topbar h1 { font-size: 26px; font-weight: 700; letter-spacing: -.01em; }
+  .topbar h1 { font-size: 26px; font-weight: 600; letter-spacing: 0; }
   .pill { display: inline-flex; align-items: center; justify-content: center; width: 38px; min-height: 38px; border-radius: 999px; border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 80%, transparent); }
   .pill svg { width: 17px; height: 17px; }
-  .hero { margin: 0 -14px; padding: 6px 14px 20px; background: linear-gradient(180deg, var(--sky-top), var(--sky-bot)); border-radius: 0 0 32px 32px; }
+  .hero { margin: 0 -14px; padding: 6px 14px 20px; background: var(--surface); border-radius: 0 0 32px 32px; }
   .summary { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
-  .big { font-size: clamp(34px, 9vw, 48px); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; }
+  .big { font-size: clamp(34px, 9vw, 48px); font-weight: 600; letter-spacing: 0; line-height: 1.05; }
   .big small { font-size: .4em; color: var(--muted); font-weight: 500; letter-spacing: 0; margin-left: 6px; }
   .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
   .alert { display: flex; gap: 12px; align-items: flex-start; margin-top: 14px; padding: 12px 14px; border-radius: 16px; background: var(--bad-soft); color: var(--bad); font-size: 14px; }
   .alert.warn { background: var(--warn-soft); color: var(--warn); }
   .alert b { display: block; } .alert span { color: var(--ink); opacity: .8; font-size: 13px; }
-  h2.sec { font-size: 17px; font-weight: 700; margin: 22px 0 10px; }
+  h2.sec { font-size: 17px; font-weight: 600; margin: 22px 0 10px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
   .shot { position: relative; aspect-ratio: 16 / 9; background: #0b0f13; display: block; }
   .shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .shot.stale img { filter: grayscale(1) brightness(.6); }
-  .state { position: absolute; left: 10px; top: 10px; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: rgba(0, 0, 0, .66); color: #fff; }
+  .state { position: absolute; left: 10px; top: 10px; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: rgba(0, 0, 0, .66); color: #fff; }
   .state i { width: 8px; height: 8px; border-radius: 50%; background: var(--good); }
   .state.quiet i { background: var(--warn); } .state.stalled i { background: var(--bad); }
   .body { padding: 12px 14px 14px; }
   .title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .title h3 { font-size: 17px; } .title span { font-size: 13px; color: var(--muted); white-space: nowrap; }
   .nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
-  .nums div { background: var(--surface-2); border-radius: 12px; padding: 7px 10px; }
-  .nums span { font-size: 11px; color: var(--muted); display: block; } .nums b { font-size: 18px; letter-spacing: -.01em; }
+  .nums div { background: var(--surface-2); border-radius: 12px; padding: 8px 10px; }
+  .nums span { font-size: 11px; color: var(--muted); display: block; } .nums b { font-size: 18px; letter-spacing: 0; }
   .label { font-size: 11px; color: var(--muted); margin: 8px 0 4px; display: flex; justify-content: space-between; }
-  .days { display: flex; align-items: end; gap: 5px; height: 44px; }
+  .days { display: flex; align-items: end; gap: 4px; height: 44px; }
   .days div { flex: 1; display: flex; flex-direction: column; justify-content: end; align-items: center; height: 100%; font-size: 10px; color: var(--muted); gap: 2px; }
   .days i { width: 100%; background: color-mix(in srgb, var(--accent) 50%, transparent); border-radius: 4px 4px 1px 1px; min-height: 2px; }
   .days div:last-child i { background: var(--accent); }
   .hours { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; }
   .hours i { aspect-ratio: 1 / 1.5; border-radius: 3px; background: var(--accent); }
   .hours-axis { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 2px; }
-  .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
-  .tag { font-size: 12px; padding: 2px 9px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); }
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+  .tag { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); }
   .tag.b { color: var(--ink); }
   .tag.bad { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
   .tag.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
@@ -89,18 +96,64 @@
   .mods { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
   .mod { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
   .mod b { display: block; } .mod small { color: var(--muted); font-size: 12px; }
-  .skeleton { height: 330px; border-radius: var(--radius); background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%); background-size: 200% 100%; animation: sh 1.4s infinite; border: 1px solid var(--line); }
+
+  .ipcam { margin-top: 14px; }
+  .ipcam h4 { font-size: 13px; font-weight: 600; margin: 18px 0 8px; color: var(--muted); text-transform: none; letter-spacing: 0; }
+  .shot.pv { aspect-ratio: 4 / 3; max-height: 62vh; width: 100%; }
+  .shot.pv img { object-fit: contain; background: #0b0f13; }
+  .shot.pv .age { position: absolute; right: 10px; bottom: 10px; padding: 3px 9px; border-radius: 999px; font-size: 12px; color: #fff; background: rgba(0,0,0,.55); }
+  .shot.pv .refresh { position: absolute; right: 10px; top: 10px; min-height: 36px; padding: 4px 12px; font-size: 13px; background: rgba(0,0,0,.55); color: #fff; border-color: transparent; }
+  .shot.pv .refresh:disabled { opacity: .6; }
+  .shot.pv .nopv { position: absolute; inset: 0; display: grid; place-items: center; color: #9fb0bb; font-size: 14px; margin: 0; }
+  .cfgbtn { display: block; width: 100%; margin-top: 14px; min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--accent); font-weight: 600; }
+  .cfgbtn[aria-expanded=true] { color: var(--ink); }
+  .ipcam .field { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 6px 0; border-top: 1px solid var(--line); }
+  .ipcam .field:first-of-type { border-top: 0; }
+  .ipcam .field > span small { display: block; color: var(--muted); font-size: 12px; }
+  .ipcam select, .ipcam input[type=time], .ipcam input[type=number] { font: inherit; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-height: 40px; }
+  .ipcam input[type=number] { width: 84px; }
+  .switch { position: relative; width: 50px; height: 30px; flex: none; }
+  .switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
+  .switch i { position: absolute; inset: 0; border-radius: 999px; background: var(--line); transition: background .2s; }
+  .switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .2s; }
+  .switch input:checked + i { background: var(--good); } .switch input:checked + i::after { transform: translateX(20px); }
+  .switch input:focus-visible + i { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { min-height: 40px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); font-size: 14px; }
+  .chip[aria-pressed=true], .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .field.stack { flex-direction: column; align-items: stretch; gap: 8px; }
+  .field.stack .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; width: 100%; }
+  .seg span { text-align: center; }
+  .seg label { position: relative; }
+  .seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .seg span { display: block; padding: 9px 14px; min-height: 40px; font-size: 14px; background: var(--surface-2); }
+  .seg input:checked + span { background: var(--accent); color: #fff; }
+  .seg input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: -3px; }
+  .win { padding: 10px 0; border-top: 1px solid var(--line); display: grid; gap: 8px; }
+  .win .times { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .win .days-pick { display: flex; gap: 4px; flex-wrap: wrap; }
+  .win .days-pick .chip { min-width: 40px; padding: 6px 0; text-align: center; }
+  .win .del { margin-left: auto; color: var(--bad); background: none; border: 0; min-height: 40px; padding: 0 8px; }
+  .addwin { margin-top: 6px; min-height: 40px; padding: 6px 14px; border-radius: 12px; border: 1px dashed var(--line); background: none; color: var(--accent); }
+  .saved { min-height: 18px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+  .saved.bad { color: var(--bad); }
+  .note { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--warn-soft); color: var(--warn); font-size: 13px; }
+  .note.bad { background: var(--bad-soft); color: var(--bad); }
+  .skeleton { height: 330px; border-radius: var(--radius); background: var(--surface-2); border: 1px solid var(--line); }
   @keyframes sh { to { background-position: -200% 0; } }
   .err { margin: 12px 0; padding: 12px 14px; border-radius: 14px; background: var(--warn-soft); color: var(--warn); font-size: 14px; }
   .foot { margin-top: 24px; font-size: 12px; color: var(--muted); text-align: center; }
   .bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; justify-content: space-around; padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
-    background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(14px); border-top: 1px solid var(--line); }
+    background: color-mix(in srgb, var(--surface) 92%, transparent);  border-top: 1px solid var(--line); }
   .nav { flex: 1; max-width: 130px; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--muted); font-size: 11px; padding: 4px; text-decoration: none; }
   .nav svg { width: 25px; height: 25px; } .nav.active { color: var(--accent); }
   @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
 </style>
+<link rel="stylesheet" href="/assets/liquid-glass.css?v=20261104-violet-2">
 </head>
-<body>
+<body class="page-cameras">
 <div class="shell">
   <header class="topbar">
     <div><p class="eyebrow">Blinkwatch</p><h1>Telecamere</h1></div>
@@ -112,6 +165,69 @@
     <div id="alerts"></div>
   </div>
   <div id="error" class="err" hidden role="alert"></div>
+  <section class="card ipcam" id="ipcam" aria-labelledby="ipcam-title" hidden>
+    <div class="shot pv" id="ip-shot" hidden>
+      <img id="ip-img" alt="Ultima immagine ricevuta dalla telecamera IP">
+      <p class="nopv" id="ip-nopv" hidden>Nessuna anteprima ricevuta ancora</p>
+      <span class="state" id="ip-shot-state"><i></i><b id="ip-shot-label">In diretta</b></span><span class="age" id="ip-shot-age"></span>
+      <button type="button" class="chip refresh" id="ip-refresh">Nuova anteprima</button>
+    </div>
+    <div class="body">
+      <div class="title"><h3 id="ipcam-title">Telecamera IP</h3><span class="tag" id="ip-badge">…</span></div>
+      <p class="eyebrow" id="ip-line"></p>
+      <div class="tags" id="ip-tags"></div>
+      <div class="note" id="ip-note" hidden></div>
+      <button type="button" class="cfgbtn" id="ip-cfg-btn" aria-expanded="false" aria-controls="ip-config">Configura</button>
+
+      <div id="ip-config" hidden>
+      <h4>Registrazione</h4>
+      <div class="field"><span>Registrazione attiva<small>Spenta, la telecamera non registra clip.</small></span>
+        <label class="switch"><input type="checkbox" id="ip-enabled" aria-label="Registrazione attiva"><i></i></label></div>
+      <div class="field"><span>Pausa<small id="ip-paused">Ferma la registrazione per un po’ e riparte da sola.</small></span></div>
+      <div class="chips" id="ip-pause" role="group" aria-label="Pausa">
+        <button type="button" class="chip" data-min="60">1 ora</button><button type="button" class="chip" data-min="240">4 ore</button>
+        <button type="button" class="chip" data-min="720">12 ore</button><button type="button" class="chip" data-min="1440">24 ore</button>
+        <button type="button" class="chip warn" data-min="0" id="ip-resume">Riprendi</button></div>
+
+      <div class="field"><span>Mostra l’immagine di anteprima<small>Un fotogramma aggiornato ogni pochi secondi. Spenta, l’immagine salvata viene cancellata.</small></span>
+        <label class="switch"><input type="checkbox" id="ip-preview" aria-label="Mostra l’immagine di anteprima"><i></i></label></div>
+
+      <div class="field stack"><span>Rotazione<small>Ruota anteprima e clip in senso orario. Dopo il cambio chiedo subito una nuova anteprima.</small></span>
+        <span class="seg" role="radiogroup" aria-label="Rotazione">
+          <label><input type="radio" name="ip-rot" value="0"><span>0°</span></label>
+          <label><input type="radio" name="ip-rot" value="90"><span>90°</span></label>
+          <label><input type="radio" name="ip-rot" value="180"><span>180°</span></label>
+          <label><input type="radio" name="ip-rot" value="270"><span>270°</span></label></span></div>
+      <div class="chips"><button type="button" class="chip" id="ip-refresh-cfg">Richiedi una nuova anteprima</button></div>
+
+      <h4>Rilevamento</h4>
+      <div class="field stack"><span>Sensibilità<small>Più è alta, più movimenti piccoli fanno partire una clip.</small></span>
+        <span class="seg" role="radiogroup" aria-label="Sensibilità">
+          <label><input type="radio" name="ip-sens" value="low"><span>Bassa</span></label>
+          <label><input type="radio" name="ip-sens" value="medium"><span>Media</span></label>
+          <label><input type="radio" name="ip-sens" value="high"><span>Alta</span></label></span></div>
+      <div class="field"><label for="ip-post">Durata dopo l’ultimo movimento</label>
+        <select id="ip-post"><option value="5">5 s</option><option value="8">8 s</option><option value="15">15 s</option><option value="30">30 s</option><option value="60">60 s</option></select></div>
+
+      <h4>Luce</h4>
+      <div class="field"><span>Flash quando rileva movimento<small>Ho una luce esterna: di solito resta spento.</small></span>
+        <label class="switch"><input type="checkbox" id="ip-torch" aria-label="Flash quando rileva movimento"><i></i></label></div>
+      <div class="field"><label for="ip-expd">Esposizione di giorno</label><select id="ip-expd"></select></div>
+      <div class="field"><label for="ip-expn">Esposizione al buio<br><small>Si attiva da sola quando la scena resta scura.</small></label><select id="ip-expn"></select></div>
+
+      <h4>Programmazione</h4>
+      <div class="field"><span>Registra solo nelle fasce orarie<small id="ip-tz"></small></span>
+        <label class="switch"><input type="checkbox" id="ip-sched" aria-label="Registra solo nelle fasce orarie"><i></i></label></div>
+      <div id="ip-wins"></div>
+      <button type="button" class="addwin" id="ip-addwin">+ Aggiungi fascia</button>
+
+      <h4>Avvisi su ntfy</h4>
+      <div class="field"><label for="ip-off">Avvisa se offline da più di</label><span><input type="number" id="ip-off" min="1" max="1440" inputmode="numeric"> min</span></div>
+      <div class="field"><label for="ip-bat">Avvisa se la batteria scende sotto</label><span><input type="number" id="ip-bat" min="0" max="90" inputmode="numeric"> %</span></div>
+      <p class="saved" id="ip-saved" role="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
   <h2 class="sec">Stato</h2>
   <div class="grid" id="cams"><div class="skeleton"></div><div class="skeleton"></div></div>
   <h2 class="sec" id="mods-title" hidden>Archivio USB dei sync module</h2>
@@ -143,7 +259,7 @@ function applyTheme(t) {
   if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
   $('theme-icon').innerHTML = THEME_ICON[t];
   const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
-  document.querySelector('meta[name=theme-color]').content = dark ? '#0a1626' : '#cfe3f5';
+  document.querySelector('meta[name=theme-color]').content = dark ? '#141415' : '#fafafa';
 }
 $('theme').onclick = () => { const n = THEMES[(THEMES.indexOf(store.get('theme', 'auto')) + 1) % 3]; store.set('theme', n); applyTheme(n); };
 applyTheme(store.get('theme', 'auto'));
@@ -221,14 +337,192 @@ function render(d) {
   const todayN = cams.reduce((a, c) => a + c.today, 0);
   $('sub').textContent = `${todayN} clip oggi${quiet.length ? ` · ${quiet.length} silenziose` : ''}${stalled.length ? ` · ${stalled.length} ferme` : ''}`;
   const lowBat = cams.filter(c => c.blink && String(c.blink.battery).toLowerCase() === 'low');
-  $('alerts').innerHTML = lowBat.map(c => `<div class="alert warn"><b>🔋</b><div><b>${esc(short(c.camera))}: batteria scarica</b><span>Sostituisci le pile (${c.blink.battery_voltage ? volts(c.blink.battery_voltage) : 'livello basso'}).</span></div></div>`).join('') + stalled.map(c => `<div class="alert"><b>!</b><div><b>${esc(short(c.camera))} non registra da ${dur(c.age_s)}</b><span>Di solito una clip ogni ${gap(c.expected_gap_s)}. Controlla batteria e Wi-Fi nell'app Blink.</span></div></div>`).join('')
-    + quiet.map(c => `<div class="alert warn"><b>i</b><div><b>${esc(short(c.camera))} è silenziosa da ${dur(c.age_s)}</b><span>Può essere normale se non passa nessuno.</span></div></div>`).join('');
+  $('alerts').innerHTML = lowBat.map(c => `<div class="alert warn"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="16" height="10" rx="2"/><path d="M22 11v2"/><path d="M6 11v2"/></svg><div><b>${esc(short(c.camera))}: batteria scarica</b><span>Sostituisci le pile (${c.blink.battery_voltage ? volts(c.blink.battery_voltage) : 'livello basso'}).</span></div></div>`).join('') + stalled.map(c => `<div class="alert"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg><div><b>${esc(short(c.camera))} non registra da ${dur(c.age_s)}</b><span>Di solito una clip ogni ${gap(c.expected_gap_s)}. Controlla batteria e Wi-Fi nell'app Blink.</span></div></div>`).join('')
+    + quiet.map(c => `<div class="alert warn"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><div><b>${esc(short(c.camera))} è silenziosa da ${dur(c.age_s)}</b><span>Può essere normale se non passa nessuno.</span></div></div>`).join('');
   $('cams').innerHTML = cams.map(card).join('');
   $('mods-title').hidden = !d.modules.length;
   $('mods').innerHTML = d.modules.map(m => `<div class="mod"><div><b>${esc(m.module)}</b><small>${esc(m.cameras.map(short).join(', '))}</small></div>
     <span class="tag ${m.status === 'active' ? 'good' : 'bad'}">${m.status === 'active' ? 'Archivio attivo' : esc(m.status)}</span></div>`).join('');
   $('foot').textContent = d.last_processed ? `Ultima clip elaborata dal watcher: ${hhmm(d.last_processed)} · stato calcolato dalla frequenza abituale di ogni camera` : '';
 }
+
+// ---- IP camera: status + management --------------------------------------------------------------------------
+const IP = { state: null, ctrl: null, timer: null, busyUntil: 0 };
+const DAYS = ['L', 'M', 'M', 'G', 'V', 'S', 'D'], DAYS_FULL = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
+const REASON = { on: 'Registra', disabled: 'Disattivata', paused: 'In pausa', outside_schedule: 'Fuori fascia' };
+(function fillExposure() {
+  const opts = Array.from({ length: 21 }, (_, i) => { const v = i - 10; return `<option value="${v}">${v > 0 ? '+' + v : v}</option>`; }).join('');
+  $('ip-expd').innerHTML = opts; $('ip-expn').innerHTML = opts;
+})();
+const ago = s => s == null ? '—' : s < 90 ? 'adesso' : dur(s) + ' fa';
+
+function ipRenderStatus(d) {
+  const st = d.status, ctrl = d.control;
+  ipRenderShot(d);
+  let badge = ['tag', '…'];
+  if (!st.service_up) badge = ['tag bad', 'Servizio fermo'];
+  else if (st.online === false && !st.streaming) badge = ['tag bad', 'Offline'];
+  else if (!d.active) badge = ['tag warn', REASON[d.reason]];
+  else if (st.recording) badge = ['tag good', 'Sta registrando'];
+  else if (st.streaming) badge = ['tag good', 'In ascolto'];
+  else badge = ['tag warn', 'Connessione…'];
+  $('ip-badge').className = badge[0]; $('ip-badge').textContent = badge[1];
+  $('ip-line').textContent = st.contact_age_s == null ? 'Il telefono non ha ancora risposto da quando il servizio è partito.'
+    : `Ultimo contatto ${ago(st.contact_age_s)} · ultima clip ${ago(st.clip_age_s)} · ultimo movimento ${ago(st.motion_age_s)}`;
+  const tags = [];
+  if (st.battery_pct != null) tags.push(`<span class="tag ${st.battery_pct <= ctrl.alerts.battery_pct ? 'bad' : st.battery_pct <= ctrl.alerts.battery_pct + 15 ? 'warn' : 'good'}">Batteria ${st.battery_pct}%</span>`);
+  else tags.push('<span class="tag">Batteria non disponibile</span>');
+  if (st.wifi_level != null) tags.push(`<span class="tag ${st.wifi_level < 30 ? 'warn' : ''}">${signal(Math.max(1, Math.ceil(st.wifi_level / 20)))}Wi-Fi ${st.wifi_level}%</span>`);
+  if (st.fps) tags.push(`<span class="tag">${st.fps} fps</span>`);
+  if (st.camera_id != null) tags.push(`<span class="tag">Camera ${esc(st.camera_id)}</span>`);
+  $('ip-tags').innerHTML = tags.join('');
+  const note = $('ip-note');
+  let msg = '', cls = 'note';
+  if (!st.service_up) { msg = 'Il servizio ipcam non sta scrivendo lo stato: le impostazioni vengono salvate ma si applicano quando riparte.'; cls += ' bad'; }
+  else if (st.online === false) { msg = `Il telefono non risponde${st.contact_age_s != null ? ' da ' + dur(st.contact_age_s) : ''}. Controlla che sia acceso, in carica e sul Wi-Fi.`; cls += ' bad'; }
+  else if (st.battery_pct != null && st.battery_pct <= ctrl.alerts.battery_pct) { msg = 'Batteria bassa: collega il caricabatterie.'; cls += ' bad'; }
+  else if (!d.active) msg = { disabled: 'La registrazione è disattivata.', paused: 'In pausa fino alle ' + new Date(ctrl.paused_until).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) + '.',
+    outside_schedule: 'Fuori dalle fasce orarie programmate: la telecamera riparte da sola.' }[d.reason] || '';
+  else if (st.last_error) msg = 'Ultimo errore di connessione: ' + st.last_error;
+  note.hidden = !msg; note.className = cls; note.textContent = msg;
+  $('ip-paused').textContent = ctrl.paused_until && d.reason === 'paused'
+    ? 'In pausa fino alle ' + new Date(ctrl.paused_until).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : 'Ferma la registrazione per un po’ e riparte da sola.';
+  $('ip-resume').hidden = d.reason !== 'paused';
+}
+
+function ipRenderShot(d) {
+  const st = d.status, shot = $('ip-shot');
+  shot.hidden = !d.control.preview;
+  if (!d.control.preview) return;
+  const has = st.preview_age_s != null;
+  $('ip-img').hidden = !has; $('ip-nopv').hidden = has;
+  const live = has && st.streaming && st.preview_age_s < 20;
+  if (has) {
+    const img = $('ip-img'), url = '/api/ipcam/preview.jpg?v=' + st.preview_v;
+    if (img.dataset.v !== String(st.preview_v)) { img.dataset.v = String(st.preview_v); img.src = url; }
+  }
+  shot.classList.toggle('stale', !live);
+  $('ip-shot-state').className = 'state ' + (live ? '' : 'stalled');
+  $('ip-shot-state').hidden = !has;
+  $('ip-shot-label').textContent = live ? 'In diretta' : 'Ultimo fotogramma';
+  $('ip-shot-age').textContent = !has || live ? '' : ago(st.preview_age_s);
+}
+let ipRefreshing = false;
+async function ipRefresh() {
+  if (ipRefreshing) return;
+  ipRefreshing = true;
+  const btns = [$('ip-refresh'), $('ip-refresh-cfg')];
+  btns.forEach(b => { b.disabled = true; });
+  $('ip-refresh').textContent = 'In corso…';
+  ipSaved('Richiedo una nuova anteprima…');
+  try {
+    let r = await fetch('/api/ipcam/preview/refresh', { method: 'POST' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    let d = await r.json();
+    const id = d.status.preview_request.id;
+    for (let i = 0; i < 16 && !(d.status.preview_request.id === id && d.status.preview_request.done); i++) {  // up to ~24 s
+      await new Promise(res => setTimeout(res, 1500));
+      r = await fetch('/api/ipcam', { cache: 'no-store' }); if (r.ok) d = await r.json();
+    }
+    const pr = d.status.preview_request;
+    IP.state = d; ipRenderStatus(d);
+    if (!pr.done) ipSaved('Il telefono non ha ancora risposto: riprova tra poco.', true);
+    else if (pr.error) ipSaved('Anteprima non ricevuta: ' + pr.error, true);
+    else ipSaved('Nuova anteprima ricevuta.');
+  } catch (e) { ipSaved('Richiesta non riuscita: ' + e.message, true); }
+  finally { btns.forEach(b => { b.disabled = false; }); $('ip-refresh').textContent = 'Nuova anteprima'; ipRefreshing = false; }
+}
+function ipFillControls(c) {
+  $('ip-enabled').checked = c.enabled;
+  $('ip-preview').checked = c.preview;
+  document.querySelectorAll('input[name=ip-rot]').forEach(r => { r.checked = Number(r.value) === c.rotate; });
+  document.querySelectorAll('input[name=ip-sens]').forEach(r => { r.checked = r.value === c.sensitivity; });
+  $('ip-post').value = String(c.post_s);
+  if (![...$('ip-post').options].some(o => o.value === String(c.post_s))) $('ip-post').add(new Option(c.post_s + ' s', String(c.post_s)), undefined), $('ip-post').value = String(c.post_s);
+  $('ip-torch').checked = c.torch;
+  $('ip-expd').value = String(c.exposure_day); $('ip-expn').value = String(c.exposure_night);
+  $('ip-sched').checked = c.schedule.enabled;
+  $('ip-off').value = c.alerts.offline_min; $('ip-bat').value = c.alerts.battery_pct;
+  ipRenderWindows(c.schedule.windows);
+}
+function ipRenderWindows(wins) {
+  $('ip-wins').hidden = $('ip-addwin').hidden = false;
+  $('ip-wins').innerHTML = wins.map((w, i) => `<div class="win" data-i="${i}">
+    <div class="days-pick" role="group" aria-label="Giorni della fascia ${i + 1}">${DAYS.map((d, k) =>
+      `<button type="button" class="chip" data-day="${k}" aria-pressed="${w.days.includes(k)}" aria-label="${DAYS_FULL[k]}">${d}</button>`).join('')}</div>
+    <div class="times"><label>Dalle <input type="time" class="w-start" value="${esc(w.start)}"></label>
+      <label>alle <input type="time" class="w-end" value="${esc(w.end)}"></label>
+      <button type="button" class="del" aria-label="Elimina la fascia ${i + 1}">Elimina</button></div></div>`).join('')
+    || '<p class="sub">Nessuna fascia: con la programmazione attiva la telecamera non registrerebbe mai.</p>';
+  $('ip-tz').textContent = (IP.state ? 'Fuso orario ' + IP.state.timezone + '. ' : '') + 'Una fascia che passa la mezzanotte appartiene al giorno in cui inizia.';
+  $('ip-addwin').disabled = wins.length >= 8;
+}
+function ipCollect() {
+  const wins = [...document.querySelectorAll('#ip-wins .win')].map(el => ({
+    days: [...el.querySelectorAll('.chip[aria-pressed=true]')].map(b => Number(b.dataset.day)),
+    start: el.querySelector('.w-start').value || '22:00', end: el.querySelector('.w-end').value || '07:00' }));
+  return {
+    enabled: $('ip-enabled').checked, sensitivity: (document.querySelector('input[name=ip-sens]:checked') || {}).value,
+    post_s: Number($('ip-post').value), torch: $('ip-torch').checked, preview: $('ip-preview').checked,
+    rotate: Number((document.querySelector('input[name=ip-rot]:checked') || {}).value || 0),
+    exposure_day: Number($('ip-expd').value), exposure_night: Number($('ip-expn').value),
+    schedule: { enabled: $('ip-sched').checked, windows: wins },
+    alerts: { offline_min: Number($('ip-off').value) || 10, battery_pct: Number($('ip-bat').value) || 0 } };
+}
+let ipSaveTimer = null;
+function ipSaved(text, bad) { const el = $('ip-saved'); el.textContent = text; el.className = 'saved' + (bad ? ' bad' : ''); }
+async function ipPost(url, body) {
+  IP.busyUntil = Date.now() + 4000;  // do not overwrite what the person is editing with an older poll
+  ipSaved('Salvataggio…');
+  try {
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    IP.state = await r.json(); IP.ctrl = IP.state.control;
+    ipRenderStatus(IP.state); ipFillControls(IP.ctrl);
+    ipSaved('Salvato · si applica entro pochi secondi');
+  } catch (e) { ipSaved('Non salvato: ' + e.message + '. Riprova.', true); }
+}
+let ipRefreshAfterSave = false;
+const ipSaveSoon = refresh => {
+  if (refresh) ipRefreshAfterSave = true;
+  clearTimeout(ipSaveTimer);
+  ipSaveTimer = setTimeout(async () => {
+    await ipPost('/api/ipcam/control', ipCollect());
+    if (ipRefreshAfterSave) { ipRefreshAfterSave = false; ipRefresh(); }
+  }, 500);
+};
+(function ipWire() {
+  const root = $('ipcam');
+  root.addEventListener('change', e => { if (e.target.matches('input, select')) ipSaveSoon(e.target.name === 'ip-rot'); });
+  $('ip-refresh').addEventListener('click', ipRefresh); $('ip-refresh-cfg').addEventListener('click', ipRefresh);
+  root.addEventListener('input', e => { if (e.target.matches('input[type=number], input[type=time]')) { IP.busyUntil = Date.now() + 4000; ipSaveSoon(); } });
+  $('ip-cfg-btn').addEventListener('click', () => {
+    const open = $('ip-config').hidden;  // hidden now -> about to open
+    $('ip-config').hidden = !open;
+    $('ip-cfg-btn').setAttribute('aria-expanded', String(open));
+    $('ip-cfg-btn').textContent = open ? 'Chiudi la configurazione' : 'Configura';
+  });
+  $('ip-pause').addEventListener('click', e => { const b = e.target.closest('[data-min]'); if (b) ipPost('/api/ipcam/pause', { minutes: Number(b.dataset.min) }); });
+  $('ip-wins').addEventListener('click', e => {
+    const chip = e.target.closest('[data-day]');
+    if (chip) { chip.setAttribute('aria-pressed', chip.getAttribute('aria-pressed') !== 'true'); ipSaveSoon(); return; }
+    const del = e.target.closest('.del');
+    if (del) { const c = ipCollect(); c.schedule.windows.splice(Number(del.closest('.win').dataset.i), 1); ipPost('/api/ipcam/control', c); }
+  });
+  $('ip-addwin').addEventListener('click', () => { const c = ipCollect(); c.schedule.windows.push({ days: [0, 1, 2, 3, 4, 5, 6], start: '22:00', end: '07:00' }); ipPost('/api/ipcam/control', c); });
+})();
+async function loadIpcam() {
+  try {
+    const r = await fetch('/api/ipcam', { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if (!d.configured) { $('ipcam').hidden = true; return; }
+    const first = !IP.state; IP.state = d; $('ipcam').hidden = false;
+    ipRenderStatus(d);
+    if (first || (Date.now() > IP.busyUntil && !$('ipcam').contains(document.activeElement))) { IP.ctrl = d.control; ipFillControls(d.control); }
+  } catch (_) { /* the other cards keep working; the IP card keeps its last values */ }
+}
+loadIpcam(); setInterval(loadIpcam, 8000);
 async function load() {
   try {
     const r = await fetch('/api/cameras?tz=' + (-new Date().getTimezoneOffset()), { cache: 'no-store' });

@@ -81,6 +81,8 @@ IPCAM_URL = os.environ.get("IPCAM_URL", "").rstrip("/")  # e.g. https://192.168.
 IPCAM_USER = os.environ.get("IPCAM_USER", "")
 IPCAM_PASS = os.environ.get("IPCAM_PASS", "")
 IPCAM_NAME = os.environ.get("IPCAM_NAME", "Telecamera IP")
-IPCAM_EXPOSURE = int(os.environ.get("IPCAM_EXPOSURE", 10))  # -10..10; +10 = night
+IPCAM_EXPOSURE = int(os.environ.get("IPCAM_EXPOSURE", 0))  # -10..10, used in daylight
+IPCAM_EXPOSURE_NIGHT = int(os.environ.get("IPCAM_EXPOSURE_NIGHT", 10))  # used only while the scene stays dark
 IPCAM_TORCH = os.environ.get("IPCAM_TORCH", "1") == "1"  # light the torch only while there is motion
+TIMEZONE = os.environ.get("BLINKWATCH_TZ", "Europe/Rome")  # for the IP camera schedule
 IPCAM_ROTATE = int(os.environ.get("IPCAM_ROTATE", 0))  # software rotation of the clip: 0/90/180/270

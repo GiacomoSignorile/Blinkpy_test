@@ -3,35 +3,42 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#dfeaf3">
+<meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141415" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/pwa/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Blinkwatch">
+<script>if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));</script>
 <title>Consumi · Blinkwatch</title>
 <style>
   :root {
     color-scheme: light;
     --bg: #eef3f7; --surface: #fff; --surface-2: #f5f8fb; --ink: #16222b; --muted: #6d7f8b; --line: #e1e9ef;
-    --accent: #2f6fe4; --accent-soft: #e6eefc; --good: #2fa874; --good-soft: #e3f5ec; --warn: #e8913c; --warn-soft: #fff0e0; --bad: #d9534f;
+    --accent: #6d28d9; --accent-soft: #f1eafe; --good: #2fa874; --good-soft: #e3f5ec; --warn: #e8913c; --warn-soft: #fff0e0; --bad: #d9534f;
     --sky-top: #cfe3f5; --sky-bot: #eef3f7; --wall: #f4f6f8; --wall-2: #dfe5ea; --roof: #4d5a66; --glass: #f6d58a; --ground: #e6ecf0;
     --flow: #35c58a; --shadow: 0 10px 30px rgba(30, 60, 90, .08);
-    --c1: #2f6fe4; --c2: #2fa874; --c3: #e8913c; --c4: #8a5cd6; --c5: #d9558f; --c6: #1ba3b8;
+    --c1: #6d28d9; --c2: #2fa874; --c3: #e8913c; --c4: #8a5cd6; --c5: #d9558f; --c6: #1ba3b8;
     --radius: 22px;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
       --bg: #0d1318; --surface: #161e25; --surface-2: #1c262f; --ink: #e8eef2; --muted: #8b9ba6; --line: #26323c;
-      --accent: #5b9bff; --accent-soft: #1b2b45; --good: #43d196; --good-soft: #14302a; --warn: #f3a65a; --warn-soft: #3a2a17; --bad: #ef7773;
+      --accent: #c4b5fd; --accent-soft: #302044; --good: #43d196; --good-soft: #14302a; --warn: #f3a65a; --warn-soft: #3a2a17; --bad: #ef7773;
       --sky-top: #0a1626; --sky-bot: #0d1318; --wall: #2b3640; --wall-2: #222c35; --roof: #151c22; --glass: #ffcf70; --ground: #19232b;
       --flow: #43d196; --shadow: 0 10px 30px rgba(0, 0, 0, .35);
-      --c1: #5b9bff; --c2: #43d196; --c3: #f3a65a; --c4: #a98af0; --c5: #ef7fb0; --c6: #4fc9dc;
+      --c1: #c4b5fd; --c2: #43d196; --c3: #f3a65a; --c4: #a98af0; --c5: #ef7fb0; --c6: #4fc9dc;
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
     --bg: #0d1318; --surface: #161e25; --surface-2: #1c262f; --ink: #e8eef2; --muted: #8b9ba6; --line: #26323c;
-    --accent: #5b9bff; --accent-soft: #1b2b45; --good: #43d196; --good-soft: #14302a; --warn: #f3a65a; --warn-soft: #3a2a17; --bad: #ef7773;
+    --accent: #c4b5fd; --accent-soft: #302044; --good: #43d196; --good-soft: #14302a; --warn: #f3a65a; --warn-soft: #3a2a17; --bad: #ef7773;
     --sky-top: #0a1626; --sky-bot: #0d1318; --wall: #2b3640; --wall-2: #222c35; --roof: #151c22; --glass: #ffcf70; --ground: #19232b;
     --flow: #43d196; --shadow: 0 10px 30px rgba(0, 0, 0, .35);
-    --c1: #5b9bff; --c2: #43d196; --c3: #f3a65a; --c4: #a98af0; --c5: #ef7fb0; --c6: #4fc9dc;
+    --c1: #c4b5fd; --c2: #43d196; --c3: #f3a65a; --c4: #a98af0; --c5: #ef7fb0; --c6: #4fc9dc;
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -49,31 +56,31 @@
 
   /* top bar */
   .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 18px 0 8px; position: relative; z-index: 2; }
-  .topbar h1 { font-size: 26px; font-weight: 700; letter-spacing: -.01em; }
+  .topbar h1 { font-size: 26px; font-weight: 600; letter-spacing: 0; }
   .eyebrow { font-size: 12px; color: var(--muted); }
   .toolbar { display: flex; align-items: center; gap: 8px; }
   .pill { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line);
-    background: color-mix(in srgb, var(--surface) 80%, transparent); font-size: 13px; text-decoration: none; color: var(--ink); backdrop-filter: blur(6px); }
+    background: color-mix(in srgb, var(--surface) 80%, transparent); font-size: 13px; text-decoration: none; color: var(--ink);  }
   .pill svg { width: 17px; height: 17px; }
   select.pill { appearance: none; padding-right: 12px; max-width: 150px; }
   .icon-btn { width: 38px; padding: 0; justify-content: center; }
 
   /* hero */
-  .hero { position: relative; margin: 0 -14px; padding: 0 14px 6px; background: linear-gradient(180deg, var(--sky-top), var(--sky-bot)); border-radius: 0 0 32px 32px; overflow: hidden; }
+  .hero { position: relative; margin: 0 -14px; padding: 0 14px 6px; background: var(--surface); border-radius: 0 0 32px 32px; overflow: hidden; }
   .hero-head { padding: 10px 0 0; }
-  .status { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); }
+  .status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
-  .dot.on { background: var(--good); box-shadow: 0 0 0 4px color-mix(in srgb, var(--good) 25%, transparent); animation: pulse 2s infinite; }
+  .dot.on { background: var(--good); animation: live 2.4s ease-in-out infinite; }
   .dot.off { background: var(--muted); opacity: .5; }
-  @keyframes pulse { 50% { box-shadow: 0 0 0 7px transparent; } }
-  .total { font-size: clamp(46px, 13vw, 72px); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; margin-top: 4px; }
+  @keyframes live { 50% { opacity: .4; } }
+  .total { font-size: clamp(46px, 13vw, 72px); font-weight: 600; letter-spacing: -.03em; line-height: 1.05; margin-top: 4px; }
   .total small { font-size: .32em; font-weight: 500; color: var(--muted); margin-left: 6px; letter-spacing: 0; }
   .hero-sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
   .scene-wrap { position: relative; max-width: 560px; margin: 6px auto 0; aspect-ratio: 360 / 300; }
   .scene-wrap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
   .node { position: absolute; font-size: 13px; color: var(--muted); line-height: 1.2; background: none; border: 0; padding: 4px; text-align: left; }
-  .node b { display: block; font-size: clamp(21px, 6.2vw, 30px); color: var(--ink); font-weight: 700; letter-spacing: -.02em; margin-top: 2px; }
-  .node b small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 3px; letter-spacing: 0; }
+  .node b { display: block; font-size: clamp(21px, 6.2vw, 30px); color: var(--ink); font-weight: 600; letter-spacing: 0; margin-top: 2px; }
+  .node b small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 4px; letter-spacing: 0; }
   .node em { display: block; font-style: normal; font-size: 12px; color: var(--good); margin-top: 1px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .node.tl { left: 3%; top: 3%; } .node.tr { right: 3%; top: 3%; text-align: right; }
   .node.bl { left: 3%; bottom: 1%; } .node.br { right: 3%; bottom: 1%; text-align: right; }
@@ -90,14 +97,14 @@
   .card { background: var(--surface); border-radius: var(--radius); padding: 16px 16px 12px; box-shadow: var(--shadow); border: 1px solid var(--line); min-width: 0; }
   .card h3 { font-size: 16px; font-weight: 600; }
   .card .period { font-size: 12px; color: var(--muted); }
-  .card .big { font-size: clamp(26px, 7vw, 34px); font-weight: 700; letter-spacing: -.02em; margin-top: 4px; }
+  .card .big { font-size: clamp(26px, 7vw, 34px); font-weight: 600; letter-spacing: 0; margin-top: 4px; }
   .card .big small { font-size: 13px; color: var(--muted); font-weight: 500; margin-left: 4px; }
   .card .note { font-size: 12px; color: var(--muted); margin-top: 2px; min-height: 17px; }
   .spark { width: 100%; height: 56px; display: block; margin-top: 8px; }
   .spark-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
   section { margin-top: 26px; scroll-margin-top: 12px; }
   .section-head { display: flex; align-items: end; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
-  .section-head h2 { font-size: 19px; font-weight: 700; }
+  .section-head h2 { font-size: 19px; font-weight: 600; }
   .section-head p { font-size: 13px; color: var(--muted); }
   .chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .chip { min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 13px; color: var(--muted); }
@@ -108,11 +115,11 @@
   .chart { position: relative; width: 100%; touch-action: pan-y; }
   .chart svg { display: block; width: 100%; overflow: visible; }
   .chart text { fill: var(--muted); font-size: 11px; }
-  .tip { position: absolute; top: 0; pointer-events: none; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 7px 10px; font-size: 12px;
+  .tip { position: absolute; top: 0; pointer-events: none; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; font-size: 12px;
     box-shadow: var(--shadow); white-space: nowrap; transform: translateX(-50%); z-index: 3; }
   .tip i { display: inline-block; width: 8px; height: 8px; border-radius: 3px; margin-right: 6px; }
   .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 4px 0; font-size: 12px; color: var(--muted); }
-  .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; }
+  .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 4px; }
   .empty { color: var(--muted); text-align: center; padding: 26px 10px; font-size: 14px; }
 
   /* device lists */
@@ -124,17 +131,17 @@
   .dev .main { flex: 1; min-width: 0; }
   .dev .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dev .sub { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .dev .val { text-align: right; font-weight: 700; font-size: 17px; white-space: nowrap; }
+  .dev .val { text-align: right; font-weight: 600; font-size: 17px; white-space: nowrap; }
   .dev .val small { display: block; font-weight: 500; font-size: 11px; color: var(--muted); }
-  .bar { height: 5px; border-radius: 3px; background: var(--surface-2); margin-top: 7px; overflow: hidden; }
+  .bar { height: 5px; border-radius: 3px; background: var(--surface-2); margin-top: 8px; overflow: hidden; }
   .bar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
-  .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); }
+  .tag { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); }
   .more { margin-top: 10px; }
 
   /* insights */
   .insights { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
   .insight { display: flex; gap: 12px; padding: 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); }
-  .insight .ico { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex: none; background: var(--good-soft); color: var(--good); font-weight: 700; }
+  .insight .ico { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex: none; background: var(--good-soft); color: var(--good); font-weight: 600; }
   .insight.warn .ico { background: var(--warn-soft); color: var(--warn); }
   .insight h3 { font-size: 14px; font-weight: 600; } .insight p { font-size: 13px; color: var(--muted); margin-top: 2px; }
 
@@ -153,23 +160,23 @@
 
   /* detail view */
   .back { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; color: var(--accent); font-weight: 600; padding: 8px 0; }
-  .detail-hero { background: linear-gradient(180deg, var(--sky-top), var(--sky-bot)); margin: 0 -14px; padding: 6px 14px 22px; border-radius: 0 0 32px 32px; }
+  .detail-hero { background: var(--surface); margin: 0 -14px; padding: 6px 14px 22px; border-radius: 0 0 32px 32px; }
   .detail-title { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
   .detail-title .ico { width: 48px; height: 48px; border-radius: 15px; display: grid; place-items: center; background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
   .detail-title .ico svg { width: 26px; height: 26px; }
   .detail-title h2 { font-size: 22px; line-height: 1.15; } .detail-title p { font-size: 12px; color: var(--muted); }
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 14px; }
   .stat { background: var(--surface); border-radius: 18px; padding: 12px 14px; border: 1px solid var(--line); }
-  .stat span { font-size: 12px; color: var(--muted); } .stat b { display: block; font-size: 21px; margin-top: 2px; letter-spacing: -.01em; }
-  .stat b small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 3px; }
+  .stat span { font-size: 12px; color: var(--muted); } .stat b { display: block; font-size: 21px; margin-top: 2px; letter-spacing: 0; }
+  .stat b small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 4px; }
   .bars { display: flex; align-items: end; gap: 8px; height: 110px; margin-top: 6px; }
   .bars div { flex: 1; text-align: center; font-size: 11px; color: var(--muted); display: flex; flex-direction: column; justify-content: end; height: 100%; }
-  .bars i { display: block; background: var(--accent); border-radius: 6px 6px 2px 2px; min-height: 3px; margin-top: 3px; }
+  .bars i { display: block; background: var(--accent); border-radius: 6px 6px 2px 2px; min-height: 3px; margin-top: 4px; }
   .bars span { color: var(--ink); font-weight: 600; font-size: 11px; }
 
   /* bottom nav */
   .bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; justify-content: space-around; padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
-    background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(14px); border-top: 1px solid var(--line); }
+    background: color-mix(in srgb, var(--surface) 92%, transparent);  border-top: 1px solid var(--line); }
   .nav-button { flex: 1; max-width: 120px; display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; border: 0; color: var(--muted); font-size: 11px; padding: 4px; }
   .nav-button svg { width: 25px; height: 25px; }
   .nav-button.active { color: var(--accent); }
@@ -180,8 +187,9 @@
   }
   @media (prefers-reduced-motion: reduce) { .flow, .dot.on { animation: none; } html { scroll-behavior: auto; } }
 </style>
+<link rel="stylesheet" href="/assets/liquid-glass.css?v=20261104-violet-2">
 </head>
-<body>
+<body class="page-power">
 <div class="shell" id="top">
   <header class="topbar">
     <div><p class="eyebrow">Monitoraggio energia</p><h1>Consumi</h1></div>
@@ -191,6 +199,13 @@
       <a class="pill icon-btn" href="/" aria-label="Torna agli eventi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5-7 7 7 7"/></svg></a>
     </div>
   </header>
+<nav class="section-nav" aria-label="Sezioni consumi">
+  <button class="nav-button active" type="button" data-target="top" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 10.5 8.5-7 8.5 7M6 9v11h12V9m-8 11v-6h4v6"/></svg><span>Home</span></button>
+  <button class="nav-button" type="button" data-target="devices"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4" y="4" width="16" height="12" rx="2"/><path d="M9 20h6m-3-4v4"/></svg><span>Dispositivi</span></button>
+  <button class="nav-button" type="button" data-target="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 19V9m5 10V5m5 14v-7m5 7V8"/></svg><span>Storico</span></button>
+  <button class="nav-button" type="button" data-target="agents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2"/></svg><span>Agenti</span></button>
+  <button class="nav-button" type="button" data-target="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.3 13.3a7.4 7.4 0 0 0 0-2.6l1.4-1.1-1.5-2.6-1.7.6a7.5 7.5 0 0 0-2.2-1.3L15 4.5h-3l-.3 1.8a7.5 7.5 0 0 0-2.2 1.3l-1.7-.6-1.5 2.6 1.4 1.1a7.4 7.4 0 0 0 0 2.6l-1.4 1.1 1.5 2.6 1.7-.6a7.5 7.5 0 0 0 2.2 1.3l.3 1.8h3l.3-1.8a7.5 7.5 0 0 0 2.2-1.3l1.7.6 1.5-2.6z"/></svg><span>Impostazioni</span></button>
+</nav>
   <div id="load-error" class="load-error" role="alert"></div>
 
   <!-- ===== home ===== -->
@@ -298,13 +313,21 @@
 
   <!-- ===== detail ===== -->
   <div id="view-detail" class="hidden"></div>
+
+  <!-- ===== agents: the Agent footprint dashboard (port 8095), embedded ===== -->
+  <div id="view-agents" class="hidden">
+    <iframe id="agents-frame" title="Consumi degli agenti" referrerpolicy="no-referrer"></iframe>
+    <p class="foot" id="agents-hint" hidden>Non riesco a raggiungere la dashboard degli agenti da questo indirizzo. <a id="agents-link" href="#" target="_blank" rel="noopener">Aprila in una scheda a parte</a></p>
+  </div>
 </div>
 
+
+
 <nav class="bottom-nav" aria-label="Navigazione principale">
-  <button class="nav-button active" type="button" data-target="top" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 10.5 8.5-7 8.5 7M6 9v11h12V9m-8 11v-6h4v6"/></svg><span>Home</span></button>
-  <button class="nav-button" type="button" data-target="devices"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4" y="4" width="16" height="12" rx="2"/><path d="M9 20h6m-3-4v4"/></svg><span>Dispositivi</span></button>
-  <button class="nav-button" type="button" data-target="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 19V9m5 10V5m5 14v-7m5 7V8"/></svg><span>Storico</span></button>
-  <button class="nav-button" type="button" data-target="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.3 13.3a7.4 7.4 0 0 0 0-2.6l1.4-1.1-1.5-2.6-1.7.6a7.5 7.5 0 0 0-2.2-1.3L15 4.5h-3l-.3 1.8a7.5 7.5 0 0 0-2.2 1.3l-1.7-.6-1.5 2.6 1.4 1.1a7.4 7.4 0 0 0 0 2.6l-1.4 1.1 1.5 2.6 1.7-.6a7.5 7.5 0 0 0 2.2 1.3l.3 1.8h3l.3-1.8a7.5 7.5 0 0 0 2.2-1.3l1.7.6 1.5-2.6z"/></svg><span>Impostazioni</span></button>
+  <a class="nav" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18M8 4v5"/></svg><span>Eventi</span></a>
+  <a class="nav" href="/cameras"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Telecamere</span></a>
+  <a class="nav" href="/label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12 12 20 4 12V4h8z"/><circle cx="8.5" cy="8.5" r="1.3"/></svg><span>Etichetta</span></a>
+  <a class="nav active" href="/power" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></svg><span>Consumi</span></a>
 </nav>
 
 <script>
@@ -369,6 +392,25 @@ function setText(id, v) { $(id).textContent = v; }
 function setPower(idV, idU, w) { const p = power(w); setText(idV, p.v); if (idU) setText(idU, p.u); }
 
 /* ---------- theme ---------- */
+/* ---------- Agent footprint tab ---------- */
+const FP = { origin: `${location.protocol}//${location.hostname}:8095`, ready: false };
+const isAgents = () => location.hash === '#/agenti';
+const fpLight = () => { const t = document.documentElement.getAttribute('data-theme'); return t === 'light' || (!t && !matchMedia('(prefers-color-scheme: dark)').matches); };
+function fpPostTheme() { const f = $('agents-frame'); f && f.contentWindow && FP.ready && f.contentWindow.postMessage({ type: 'footprint-theme', light: fpLight() }, FP.origin); }
+function showAgents() {
+  const f = $('agents-frame');
+  if (!f.getAttribute('src')) {  // load once; the dashboard refreshes itself
+    f.src = `${FP.origin}/?embed=1&theme=${fpLight() ? 'light' : 'dark'}`;
+    $('agents-link').href = `${FP.origin}/`;
+    setTimeout(() => { if (!FP.ready) $('agents-hint').hidden = false; }, 7000);
+  } else fpPostTheme();
+}
+window.addEventListener('message', e => {
+  const f = $('agents-frame');
+  if (e.origin !== FP.origin || !f || e.source !== f.contentWindow || !e.data) return;
+  if (e.data.type === 'footprint-ready') { FP.ready = true; $('agents-hint').hidden = true; fpPostTheme(); }
+  else if (e.data.type === 'footprint-height') { const h = Number(e.data.h); if (h > 200 && h < 20000) f.style.height = Math.ceil(h) + 'px'; }
+});
 const THEMES = ['auto', 'light', 'dark'];
 const THEME_ICON = {
   auto: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17" /><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>',
@@ -378,10 +420,11 @@ const THEME_ICON = {
 function applyTheme(t) {
   const root = document.documentElement;
   if (t === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', t);
+  typeof fpPostTheme === 'function' && fpPostTheme();
   $('theme-icon').innerHTML = THEME_ICON[t];
   setText('theme-label', { auto: 'Automatico (segue il telefono)', light: 'Chiaro', dark: 'Scuro' }[t]);
   const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
-  document.querySelector('meta[name=theme-color]').content = dark ? '#0a1626' : '#cfe3f5';
+  document.querySelector('meta[name=theme-color]').content = dark ? '#141415' : '#fafafa';
 }
 function cycleTheme() {
   const cur = store.get('theme', 'auto');
@@ -582,7 +625,7 @@ function renderInsights(d) {
   if (gone.length) out.push({ warn: 1, t: `${gone.length} PC senza letture`, p: `${gone.map(hostName).join(', ')}: spenti, in sospensione o collector fermo.` });
   const idle = ov.net.filter(x => !x.hidden && !x.online && x.last_seen && ov.now - x.last_seen < 7 * 86400).length;
   if (idle) out.push({ t: 'Dispositivi spenti', p: `${idle} dispositivi visti negli ultimi 7 giorni sono ora offline e non contano nel totale.` });
-  $('insight-list').innerHTML = out.map(i => `<div class="insight ${i.warn ? 'warn' : ''}"><span class="ico">${i.warn ? '!' : '✓'}</span><div><h3>${esc(i.t)}</h3><p>${esc(i.p)}</p></div></div>`).join('') || '<div class="empty">Servono più letture.</div>';
+  $('insight-list').innerHTML = out.map(i => `<div class="insight ${i.warn ? 'warn' : ''}"><span class="ico">${i.warn ? '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>' : '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>'}</span><div><h3>${esc(i.t)}</h3><p>${esc(i.p)}</p></div></div>`).join('') || '<div class="empty">Servono più letture.</div>';
 }
 function rangeChips(el, cur, onPick) {
   const R = [[6, '6 h'], [24, '24 h'], [168, '7 g'], [720, '30 g']];
@@ -640,10 +683,10 @@ async function renderDetail() {
         <div class="row"><div><h3>Resto del PC</h3><p>Scheda, RAM, dischi, ventole (W non misurati)</p></div><label class="field"><input type="number" id="e-base" min="0" max="1000" step="0.5" value="${h.base_w}"> W</label></div>
         <div class="row"><div><h3>Efficienza alimentatore</h3><p>0,85 = perde il 15%</p></div><label class="field"><input type="number" id="e-eff" min="0.3" max="1" step="0.01" value="${h.eff}"></label></div>
         <div class="row"><span id="e-msg"></span><button class="btn" type="button" id="e-save">Salva</button></div></div></section>`;
-      if (S.flash) { $('e-msg').innerHTML = '<span class="saved">Salvato ✓</span>'; S.flash = false; }
+      if (S.flash) { $('e-msg').innerHTML = '<span class="saved">Salvato<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg></span>'; S.flash = false; }
       $('e-save').onclick = async () => {
         try { await api('/api/power/host/' + encodeURIComponent(h.host), { alias: $('e-alias').value.trim() || null, base_w: Number($('e-base').value), eff: Number($('e-eff').value) });
-          $('e-msg').innerHTML = '<span class="saved">Salvato ✓</span>'; box.dataset.key = ''; S.flash = true; await loadOverview(); loadMonthly(); }
+          $('e-msg').innerHTML = '<span class="saved">Salvato<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg></span>'; box.dataset.key = ''; S.flash = true; await loadOverview(); loadMonthly(); }
         catch (e) { $('e-msg').textContent = 'Errore: ' + e.message; }
       };
     }
@@ -698,7 +741,7 @@ async function renderDetail() {
         <div class="row"><div><h3>Potenza media</h3><p>Vuoto = tipico del tipo (${typical} W)</p></div><label class="field"><input type="number" id="e-w" min="0" max="5000" step="0.5" value="${x.watts_custom ? x.watts : ''}" placeholder="${typical}"> W</label></div>
         <div class="row"><div><h3>Escludi dal totale</h3><p>Per dispositivi che non sono tuoi (ospiti, vicini)</p></div><button class="chip" id="e-hide" type="button" aria-pressed="${x.hidden}">${x.hidden ? 'Escluso' : 'Incluso'}</button></div>
         <div class="row"><span id="e-msg"></span><button class="btn" type="button" id="e-save">Salva</button></div></div></section>`;
-    if (S.flash) { $('e-msg').innerHTML = '<span class="saved">Salvato ✓</span>'; S.flash = false; }
+    if (S.flash) { $('e-msg').innerHTML = '<span class="saved">Salvato<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg></span>'; S.flash = false; }
     $('e-hide').onclick = e => { const b = e.currentTarget; const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on); b.textContent = on ? 'Escluso' : 'Incluso'; };
     $('e-save').onclick = async () => {
       const w = $('e-w').value.trim();
@@ -711,9 +754,10 @@ async function renderDetail() {
 
 /* ---------- routing + loading ---------- */
 function route() {
-  const detail = isDetail();
-  $('view-home').classList.toggle('hidden', detail); $('view-detail').classList.toggle('hidden', !detail);
-  document.querySelector('.bottom-nav').querySelectorAll('.nav-button').forEach(b => b.classList.toggle('active', !detail && b.dataset.target === 'top'));
+  const detail = isDetail(), agents = isAgents();
+  $('view-home').classList.toggle('hidden', detail || agents); $('view-detail').classList.toggle('hidden', !detail); $('view-agents').classList.toggle('hidden', !agents);
+  document.querySelector('.section-nav').querySelectorAll('.nav-button').forEach(b => b.classList.toggle('active', agents ? b.dataset.target === 'agents' : (!detail && b.dataset.target === 'top')));
+  if (agents) { window.scrollTo(0, 0); showAgents(); return; }
   if (detail) { $('view-detail').innerHTML = ''; $('view-detail').dataset.key = ''; window.scrollTo(0, 0); renderDetail(); } else { renderAll(); renderHomeChart(); }
 }
 window.addEventListener('hashchange', route);
@@ -721,7 +765,8 @@ document.addEventListener('click', e => {
   const go = e.target.closest('[data-go]'); if (go) { location.hash = go.dataset.go; return; }
   const nav = e.target.closest('.nav-button');
   if (nav) {
-    if (isDetail()) { history.pushState(null, '', location.pathname); route(); }
+    if (nav.dataset.target === 'agents') { if (!isAgents()) location.hash = '#/agenti'; return; }
+    if (isDetail() || isAgents()) { history.pushState(null, '', location.pathname); route(); }
     const t = $(nav.dataset.target); t && t.scrollIntoView({ behavior: 'smooth', block: 'start' });
     document.querySelectorAll('.nav-button').forEach(b => b.classList.toggle('active', b === nav));
   }

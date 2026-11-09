@@ -11,11 +11,38 @@ import numpy as np
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 
-from . import config, identify, power, store
+from . import config, identify, ipcam_control, power, store
 
 app = FastAPI(title="Blinkwatch")
 app.include_router(power.router)
 PAGE = Path(__file__).with_name("index.html")
+
+
+@app.get("/assets/liquid-glass.css")
+def liquid_glass_css():
+    return FileResponse(Path(__file__).with_name("liquid-glass.css"), media_type="text/css")
+
+
+PWA_DIR = Path(__file__).with_name("pwa")
+
+
+@app.get("/manifest.webmanifest")
+def manifest():
+    return FileResponse(PWA_DIR / "manifest.webmanifest", media_type="application/manifest+json")
+
+
+@app.get("/sw.js")
+def service_worker():
+    # served from the root so that its scope covers every page
+    return FileResponse(PWA_DIR / "sw.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/pwa/{name}")
+def pwa_icon(name: str):
+    path = PWA_DIR / name
+    if name not in {"icon-192.png", "icon-512.png", "icon-maskable-512.png"} or not path.exists():
+        raise HTTPException(404)
+    return FileResponse(path, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -184,6 +211,71 @@ def cameras(tz: int = 0):
             "last_processed": processed}
 
 
+def _ipcam_payload():
+    ctrl = ipcam_control.load()
+    status = ipcam_control.read_status()
+    now = datetime.now(timezone.utc)
+
+    def age(key):
+        try:
+            return int((now - datetime.fromisoformat(status[key])).total_seconds())
+        except (KeyError, ValueError, TypeError):
+            return None
+
+    service_up = age("written_at") is not None and age("written_at") < 30  # the ipcam service flushes every 2 s
+    active, reason = ipcam_control.is_active(ctrl, now)
+    try:
+        st = ipcam_control.PREVIEW_FILE.stat()
+        preview_age, preview_v = int(now.timestamp() - st.st_mtime), st.st_mtime_ns
+    except OSError:
+        preview_age = preview_v = None
+    req = ipcam_control.pending_request()
+    handled = bool(req) and status.get("preview_handled_id") == req
+    keys = ("online", "streaming", "recording", "battery_pct", "wifi_level", "fps", "camera_id", "last_clip", "last_error")
+    return {"now": now.isoformat(), "configured": bool(config.IPCAM_URL), "name": config.IPCAM_NAME, "control": ctrl,
+            "active": active, "reason": reason, "timezone": config.TIMEZONE,
+            "status": {"service_up": service_up, **{k: status.get(k) for k in keys},
+                       "contact_age_s": age("last_contact_at"), "frame_age_s": age("last_frame_at"),
+                       "motion_age_s": age("last_motion_at"), "clip_age_s": age("last_clip_at"),
+                       "last_clip_at": status.get("last_clip_at"), "preview_age_s": preview_age, "preview_v": preview_v,
+                       "preview_request": {"id": req, "done": handled, "error": status.get("preview_error") if handled else None}}}
+
+
+@app.get("/api/ipcam")
+def ipcam_state():
+    """Settings and live status of the IP camera (phone): battery, Wi-Fi, online, what it is doing and why."""
+    return _ipcam_payload()
+
+
+@app.get("/api/ipcam/preview.jpg")
+def ipcam_preview():
+    """The most recent frame the ipcam service saved (404 when previews are off or nothing was received yet)."""
+    if not ipcam_control.PREVIEW_FILE.exists():
+        raise HTTPException(404)
+    return FileResponse(ipcam_control.PREVIEW_FILE, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/ipcam/preview/refresh")
+def ipcam_preview_refresh():
+    """Ask for a new preview now; the UI then polls /api/ipcam until status.preview_request.done."""
+    ipcam_control.request_preview()
+    return _ipcam_payload()
+
+
+@app.post("/api/ipcam/control")
+def ipcam_set_control(patch: dict = Body(...)):
+    """Partial update of the IP camera settings; unknown keys are ignored and values are clamped."""
+    ipcam_control.update(patch)
+    return _ipcam_payload()
+
+
+@app.post("/api/ipcam/pause")
+def ipcam_pause(body: dict = Body(...)):
+    """Pause recording for body.minutes (0 or missing resumes)."""
+    ipcam_control.pause(body.get("minutes"))
+    return _ipcam_payload()
+
+
 @app.get("/api/battery")
 def battery(hours: int = 168):
     """Battery voltage per camera, averaged per hour over the last `hours`, as recorded by the watcher at every loop."""
@@ -259,6 +351,28 @@ def thumb(clip_id: str):
 
 
 PROVISIONAL_BELOW = 10  # suggestions backed by fewer labelled examples are marked as unreliable
+
+
+def prioritize_underrepresented(crops, counts):
+    """Show crops suggested as the least-labelled classes before common classes."""
+    return sorted(crops, key=lambda crop: (
+        counts.get((crop.get("suggestion") or {}).get("label"), float("inf")),
+        -(crop.get("suggestion") or {}).get("score", 0),
+        -crop["id"],
+    ))
+
+
+def review_candidates(db, kind, subject, limit):
+    """Fetch uncorrected crops whose preferred model prediction is this subject."""
+    return db.execute(
+        "SELECT * FROM crops WHERE kind=? AND label IS NULL AND "
+        "(CASE WHEN pred_model IS NOT NULL AND pred_label IS NOT NULL THEN pred_label "
+        "WHEN auto_label IS NOT NULL THEN auto_label ELSE pred_label END)=? "
+        "ORDER BY COALESCE(pred_margin, auto_margin) IS NULL, "
+        "COALESCE(pred_margin, auto_margin) ASC, id DESC LIMIT ?",
+        (kind, subject, limit)).fetchall()
+
+
 def suggest(db, kind, rows):
     """Suggest a label for unlabelled crops (benchmark: ~90% on cats, ~65-75% on people)."""
     clf, counts = identify.get_classifier(db, kind)
@@ -284,6 +398,7 @@ def label_page():
 def crops(kind: str = "animale", label: str = "", limit: int = 20):
     """label='' -> crops still to label (the least sure first, then newest);
     label='auto:<name>' -> crops auto-labelled <name> and not yet checked by a human;
+    label='review:<name>' -> model-labelled crops for that predicted subject, awaiting human review;
     otherwise -> crops a human labelled with that label."""
     if kind not in config.LABELS:
         raise HTTPException(400, "unknown kind")
@@ -292,6 +407,9 @@ def crops(kind: str = "animale", label: str = "", limit: int = 20):
         if label.startswith("auto:"):
             rows = db.execute("SELECT * FROM crops WHERE kind=? AND label IS NULL AND auto_accepted=1 AND auto_label=?"
                               " ORDER BY auto_conf ASC LIMIT ?", (kind, label[5:], limit)).fetchall()
+        elif label.startswith("review:"):
+            subject = label[7:]
+            rows = review_candidates(db, kind, subject, limit)
         elif label:
             rows = db.execute("SELECT * FROM crops WHERE kind=? AND label=? ORDER BY id DESC LIMIT ?",
                               (kind, label, limit)).fetchall()
@@ -305,6 +423,13 @@ def crops(kind: str = "animale", label: str = "", limit: int = 20):
         for name, n in db.execute("SELECT auto_label, COUNT(*) FROM crops WHERE kind=? AND label IS NULL AND auto_accepted=1"
                                   " GROUP BY auto_label", (kind,)):
             stats[f"auto:{name}"] = n
+        for name, n in db.execute(
+                "SELECT subject, COUNT(*) FROM (SELECT CASE "
+                "WHEN pred_model IS NOT NULL AND pred_label IS NOT NULL THEN pred_label "
+                "WHEN auto_label IS NOT NULL THEN auto_label ELSE pred_label END AS subject "
+                "FROM crops WHERE kind=? AND label IS NULL AND (pred_label IS NOT NULL OR auto_label IS NOT NULL)) "
+                "WHERE subject IS NOT NULL GROUP BY subject", (kind,)):
+            stats[f"review:{name}"] = n
         sugg = {} if (label and not label.startswith("auto:")) else suggest(db, kind, rows)
     finally:
         db.close()
@@ -316,6 +441,9 @@ def crops(kind: str = "animale", label: str = "", limit: int = 20):
             sugg[r["id"]] = {"label": r["auto_label"], "score": round(r["auto_conf"], 3), "n": None,
                              "provisional": False, "source": "auto"}
     crops = [{**{k: r[k] for k in r.keys() if k != "embedding"}, "suggestion": sugg.get(r["id"])} for r in rows]
+    if not label:
+        label_counts = {k: v for k, v in stats.items() if not k.startswith(("_", "auto:"))}
+        crops = prioritize_underrepresented(crops, label_counts)
     return {"labels": config.LABELS[kind], "stats": stats, "crops": crops}
 
 

@@ -8,10 +8,11 @@ x-common: &common
     DATA_DIR: /data
     DOWNLOAD_PATH: /home/giacomo/Documenti/Recordings
     NTFY_URL: http://ntfy
-    # v3 is less confident than v1 on real clips (at 0.5 it named 15/80 recent crops, v1 26/80). Threshold 0.35: held-out precision 95.1%/93.0%
-    # (time/group folds), same as v1 at 0.5. To roll back: delete these two lines (defaults: v1 at 0.5).
-    PERSON_MODEL: /data/models/persona_clipL_v3.pt
-    IDENTITY_MIN_CONF_PERSONA: "0.35"
+    # 2026-10-27: human_20261026 (CLIP-L fine-tuned on 949 hand labels). Same-validation A/B: 76.7% vs 69.8% bacc with the 17/10 labels only.
+    # Threshold 0.6: out-of-fold precision 94.0% (group) / 77.1% (time) at 63%/20% coverage; 0.5 would be 91.5%/67.0%.
+    # To roll back: PERSON_MODEL -> /data/models/persona_clipL_v3.pt and IDENTITY_MIN_CONF_PERSONA -> "0.35".
+    PERSON_MODEL: /data/models/persona_clipL_human_20261026.pt
+    IDENTITY_MIN_CONF_PERSONA: "0.6"
   volumes:
     - ./data:/data
     - /home/giacomo/Documenti/Recordings:/home/giacomo/Documenti/Recordings

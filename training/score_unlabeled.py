@@ -23,18 +23,37 @@ db.execute("PRAGMA busy_timeout = 30000")
 rows = db.execute("SELECT id, file FROM crops WHERE kind='persona' AND label IS NULL "
                   "AND (pred_model IS NULL OR pred_model != ?)", (model.name,)).fetchall()
 print(f"{len(rows)} crops to score with {model.name}", flush=True)
+
+
+pending = []
+
+
+def flush():
+    """Write the scores in one short transaction: the watcher and the web UI share this database,
+    and a transaction held open while the model runs blocks both of them."""
+    for _ in range(120):
+        try:
+            with db:
+                db.executemany("UPDATE crops SET pred_label=?, pred_conf=?, pred_margin=?, pred_model=? "
+                               "WHERE id=? AND label IS NULL", pending)
+            pending.clear()
+            return
+        except sqlite3.OperationalError:
+            time.sleep(5)
+    raise SystemExit("database stayed locked for 10 minutes")
+
+
 t0 = time.time()
 for i, r in enumerate(rows, 1):
     img = cv2.imread(str(config.CROP_DIR / r["file"]))
     if img is None:
         continue
     label, prob, margin = model.predict(img)
-    db.execute("UPDATE crops SET pred_label=?, pred_conf=?, pred_margin=?, pred_model=? WHERE id=? AND label IS NULL",
-               (label, round(prob, 3), round(margin, 3), model.name, r["id"]))
-    if i % 25 == 0:
-        db.commit()
+    pending.append((label, round(prob, 3), round(margin, 3), model.name, r["id"]))
+    if i % 100 == 0:
+        flush()
         print(f"  {i}/{len(rows)}  ({time.time() - t0:.0f}s)", flush=True)
-db.commit()
+flush()
 print(f"done in {time.time() - t0:.0f}s")
 print(db.execute("SELECT pred_label, COUNT(*) FROM crops WHERE kind='persona' AND label IS NULL AND pred_model=? GROUP BY 1 ORDER BY 2 DESC",
                  (model.name,)).fetchall() and [tuple(x) for x in db.execute(
