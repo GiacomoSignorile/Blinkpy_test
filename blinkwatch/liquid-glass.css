@@ -316,3 +316,39 @@ svg.ic.bi { width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px; 
   .page-index .stat:first-child { outline: 1px solid CanvasText; }
   .page-index #cats .chip[aria-pressed="true"], .page-label .controls button.active { border-color: Highlight; outline: 1px solid Highlight; }
 }
+
+/* ── Desktop (>=1024px): sidebar dock + canvas ampio, non piu' layout mobile ── */
+.dock-brand { display: none; }
+@media (min-width: 1024px) {
+  body { padding-bottom: 56px; padding-left: calc(264px + env(safe-area-inset-left, 0px)); }
+  .bottom-nav {
+    left: 24px; right: auto; top: 24px; bottom: 24px;
+    transform: none; width: 216px; max-width: none;
+    flex-direction: column; align-items: stretch; justify-content: flex-start;
+    gap: 4px; padding: 18px 12px 14px; border-radius: 22px;
+  }
+  .dock-brand {
+    display: flex; align-items: center; gap: 9px; padding: 2px 10px 14px;
+    border-bottom: 1px solid var(--line); margin-bottom: 10px;
+  }
+  .dock-brand .dot {
+    width: 10px; height: 10px; border-radius: 50%; flex: none;
+    background: var(--accent); box-shadow: 0 0 10px var(--accent-soft);
+  }
+  .dock-brand b { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  .dock-brand small {
+    margin-left: auto; color: var(--muted); font-size: 10px;
+    text-transform: uppercase; letter-spacing: .09em;
+  }
+  .bottom-nav .nav {
+    flex: 0 0 auto; flex-direction: row; justify-content: flex-start; gap: 14px;
+    min-height: 42px; padding: 9px 14px; border-radius: 12px;
+    font-size: 14px; font-weight: 500;
+  }
+  .bottom-nav .nav:hover { background: var(--accent-soft); color: var(--ink); }
+  .bottom-nav .nav.active { color: var(--accent); background: var(--accent-soft); }
+  .bottom-nav .nav svg { width: 20px; height: 20px; flex: none; }
+  .shell { width: min(100% - 96px, 1280px); margin: 0 auto; }
+  .topbar { padding: 40px 4px 28px; }
+  .day { margin: 40px 4px 14px; }
+}
